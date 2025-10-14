@@ -1,16 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.optimize import bisect
+from pathlib import Path
+import pandas as pd
 
-# Zielgrößen wie zuvor
-L_target = 0.25        # desired central-axis length [m]
-tip_d = 0.006          # tip diameter [m]
-base_d = 0.060         # base diameter [m]
-Delta_theta = np.deg2rad(30)  # discretization step (30°)
-N = int(np.ceil(np.log(base_d/tip_d) / (Delta_theta)))
-N = max(N, 6)
+# ==========================
+# 1) Parameter & Mathematik
+# ==========================
+L_target   = 0.25               # gewünschte Mittelachsenlänge [m]
+tip_d      = 0.006              # Spitzendurchmesser [m]
+base_d     = 0.060              # Basisdurchmesser [m]
+Delta_theta = np.deg2rad(30)    # Diskretisierungsschritt (30°)
 
-# ---------- Helper functions ----------
+# --- Hilfsfunktionen aus deiner Vorlage ---
 def rho(theta, a, b):
     return a * np.exp(b * theta)
 
@@ -21,6 +25,7 @@ def length_central(a, b, theta0):
     return (np.sqrt(b**2 + 1.0) / b) * (rho_c(theta0, a, b) - rho_c(0.0, a, b))
 
 def delta_width(theta, a, b):
+    # δ(θ) = a ( e^{b(θ+2π)} − e^{bθ} )
     return a * (np.exp(b*(theta + 2*np.pi)) - np.exp(b*theta))
 
 def theta0_from_ratio(b, base_d, tip_d):
@@ -29,62 +34,294 @@ def theta0_from_ratio(b, base_d, tip_d):
 def a_from_tip(b, tip_d):
     return tip_d / (np.exp(2*np.pi*b) - 1.0)
 
-def L_from_b(b):
+def L_from_b(b, base_d, tip_d):
     th0 = theta0_from_ratio(b, base_d, tip_d)
     a_b = a_from_tip(b, tip_d)
     return length_central(a_b, b, th0)
 
 def f_of_b(b):
-    return L_from_b(b) - L_target
+    return L_from_b(b, base_d, tip_d) - L_target
 
-# ---------- Step 2.1: Solve for b with scipy.optimize.bisect ----------
-b_sol = bisect(f_of_b, 1e-4, 1.0, xtol=1e-12, rtol=1e-12, maxiter=100)
-theta0 = theta0_from_ratio(b_sol, base_d, tip_d)
-a = a_from_tip(b_sol, tip_d)
+# --- Solve b with bisect ---
+b_sol   = bisect(f_of_b, 1e-4, 1.0, xtol=1e-12, rtol=1e-12, maxiter=200)
+theta0  = theta0_from_ratio(b_sol, base_d, tip_d)
+print(theta0)
+a       = a_from_tip(b_sol, tip_d)
 L_check = length_central(a, b_sol, theta0)
 
-print("Gelöste Parameter mit scipy.optimize.bisect:")
-print({"b": b_sol, "theta0[rad]": theta0, "theta0[deg]": np.rad2deg(theta0), "a": a, "L_check[m]": L_check})
-print(f"Fehler |L(b)-L_target| = {abs(L_check - L_target):.3e} m")
+# Anzahl Segmente aus θ-Spanne mit Mindestanzahl
+N = 1 / (b_sol * Delta_theta) * np.log(base_d / tip_d)
 
-# ---------- Step 2.2/2.3: Discretization with equal Δθ ----------
-thetas = np.linspace(0, theta0, N+1)
-rc_vals = rho_c(thetas, a, b_sol)
-r_vals = rho(thetas, a, b_sol)
+print("==========================")
+print("Anzahl Segmente N =", N)
+N = int(np.round(N))
+print("Anzahl Segmente gerundet N =", N)
+new_Delta_theta = theta0 / N
+print("Neuer Diskretisierungsschritt Δθ =", np.rad2deg(new_Delta_theta), "°", f"({new_Delta_theta:.6g} rad)")
+print("===========================")
+
+#================================================
+# Punkte
+theta = np.linspace(0, theta0, 100)
+x = a*np.exp(b_sol*theta)*np.cos(theta)
+y = a*np.exp(b_sol*theta)*np.sin(theta)
+
+# CSV
+df = pd.DataFrame({'x [m]': x, 'y [m]': y})
+#df.to_csv('spiral_xy.csv', sep='\t', index=False, float_format='%.6f')
+
+#================================================
+
+# Gleichmäßige Diskretisierung in θ
+thetas     = np.linspace(0.0, theta0, N+1)
+print(len(thetas))
 delta_vals = delta_width(thetas, a, b_sol)
-s_vals = (np.sqrt(b_sol**2+1)/b_sol) * (rho_c(thetas, a, b_sol) - rho_c(0, a, b_sol))
-Y_vals = L_check - s_vals
-w_vals = 0.5 * delta_vals
+s_vals     = (np.sqrt(b_sol**2+1)/b_sol) * (rho_c(thetas, a, b_sol) - rho_c(0, a, b_sol))
+Y_vals     = L_check - s_vals          # 0 an der Basis, L an der Spitze (wie bei dir)
+w_vals     = 0.5 * delta_vals          # halbe Breite
+print(thetas)
+print(s_vals)
+print(Y_vals)
+print(w_vals)
+# Segmentlängen in "entrollter" Darstellung:
+seg_lengths = (Y_vals[:-1] - Y_vals[1:])  # positive Werte
 
-# ---------- Plots ----------
-# Spiral
-theta_dense = np.linspace(0, theta0, 800)
-r_dense = rho(theta_dense, a, b_sol)
-x_dense = r_dense * np.cos(theta_dense)
-y_dense = r_dense * np.sin(theta_dense)
+# Querschnitts-Halbe (gemittelt pro Segment)
+seg_halfwidths = w_vals
+print("=========================")
+print(w_vals[:-1])
+print(w_vals[1:])
+print(seg_halfwidths)
+print(len(seg_halfwidths[:-1]))
 
-plt.figure(figsize=(6,6))
-plt.plot(x_dense, y_dense, label="Spiral r(θ)")
-plt.axis("equal"); plt.title("Logarithmische Spirale mit gelöstem b")
-plt.legend(); plt.show()
 
-# Breite δ(θ)
-plt.figure(figsize=(6,4))
-plt.plot(thetas, delta_vals)
-plt.xlabel("θ [rad]"); plt.ylabel("Width δ(θ) [m]")
-plt.title("Segmentbreite δ(θ)")
-plt.show()
+print("=========================")
+print("Spiral-Parameter & Diskretisierung")
+print("=========================")
+print(f"  Ziel-Länge L_target = {L_target} m")
+print(f"  Basis-Durchmesser    = {base_d} m")
+print(f"  Spitze-Durchmesser   = {tip_d} m")
+print(f"  Diskretisierungsschritt Δθ = {np.rad2deg(new_Delta_theta):.1f}°")
+print(f"  Gelöste Parameter:")
+print(f"    b       = {b_sol:.6g}")
+print(f"    theta0  = {theta0:.6g} rad = {np.rad2deg(theta0):.2f} deg")
+print(f"    a       = {a:.6g}")
+print(f"    L_check = {L_check:.6g} m  (Ziel {L_target} m)  |Δ|={abs(L_check-L_target):.3e}")
+print(f"  Diskretisierung in N={N} Segmente")
+print(f"    mittlere Segmentlänge = {np.mean(seg_lengths):.6g} m")
+print(f"    min Segmentlänge      = {np.min(seg_lengths):.6g} m")
+print(f"    max Segmentlänge      = {np.max(seg_lengths):.6g} m")
+print(f"    mittlere Halbe Breite = {np.mean(seg_halfwidths):.6g} m")
+print(f"    min Halbe Breite      = {np.min(seg_halfwidths):.6g} m")
+print(f"    max Halbe Breite      = {np.max(seg_halfwidths):.6g} m")
+print("=========================")
 
-# Flachlayout (Uncurled)
-plt.figure(figsize=(6,8))
+print("Zwischenwerte")
+print(" theta (rad) |   s (m)   |   Y (m)   | delta (m) |  w=delta/2 (m)")
+for i in range(len(thetas)):
+    print(f" {thetas[i]:10.6g} | {s_vals[i]:9.6g} | {Y_vals[i]:9.6g} | {delta_vals[i]:9.6g} | {w_vals[i]:9.6g}")
+print("=========================")
+
+print("Segmentwerte")
+print(" seg |  seg_len (m) | half_width (m)")
 for i in range(N):
-    y0, y1 = Y_vals[i], Y_vals[i+1]
-    w0, w1 = w_vals[i], w_vals[i+1]
-    xs = np.array([-w0,  w0,  w1, -w1, -w0])
-    ys = np.array([ y0,  y0,  y1,  y1,  y0])
-    plt.plot(xs, ys)
-plt.gca().invert_yaxis()
-plt.xlabel("x [m]"); plt.ylabel("Y (entrollt) [m]")
-plt.title("Uncurled (flache) Anordnung der Segmente")
-plt.show()
+    print(f" {i:3d} | {seg_lengths[i]:12.6g} | {seg_halfwidths[i]:14.6g}")
+print("=========================")
 
+# Kumulative Gelenkwinkel (Pose, die der Δθ-Auflösung folgt)
+per_joint_angle = np.full(N, theta0 / N)   # gleichmäßig verteilte Winkel summieren sich zu theta0
+qpos_angles = np.cumsum(per_joint_angle)   # kumuliert, nur für Keyframe (rein visuell/praktisch)
+
+print("Gelöste Parameter:")
+print(f"  b      = {b_sol:.6g}")
+print(f"  theta0 = {theta0:.6g} rad = {np.rad2deg(theta0):.2f} deg")
+print(f"  a      = {a:.6g}")
+print(f"  L_check= {L_check:.6g} m (Ziel {L_target} m)  |Δ|={abs(L_check-L_target):.3e}")
+
+# ========================================
+# 2) MuJoCo-MJCF-Generator (Box-Kette)
+# ========================================
+def mjcf_header(model_name="spiral_chain"):
+    return f'''<mujoco model="{model_name}">
+  <compiler/>
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <size njmax="1000" nconmax="1000"/>
+  <default>
+    <joint damping="0.02" limited="true" range="{-np.rad2deg(new_Delta_theta)} {np.rad2deg(new_Delta_theta)}"/>
+    <geom  friction="0.8 0.1 0.1" density="1200" rgba="0.7 0.7 0.8 1" contype="1" conaffinity="0"/>
+  </default>
+  <worldbody>
+    <body name="base" pos="0 0 0">
+      <geom type="plane" size="2 2 0.1" rgba="0 0 1 0.6" contype="2" conaffinity="1"/>
+      <!-- Der eigentliche Ketten-Root wird hier als Kind erzeugt -->
+'''
+def worldbody_footer():
+    return '''    </body>
+  </worldbody>
+'''
+
+def mjcf_footer():
+    return '''
+</mujoco>
+'''
+
+NUM_CABLES = 2
+
+# ---- feste Einstellungen für 2 Seile (±x) ----
+SITE_SIZE      = 0.001     # sichtbare Größe der Site-Kugeln
+RADIAL_MARGIN  = 0.0002    # minimal nach innen von der äußersten Kante
+Z_IN_MARGIN    = 0.0008    # etwas weg vom Gelenk (z=0)
+Z_OUT_MARGIN   = 0.0008    # etwas weg vom Attachment (z=seg_len)
+
+
+def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
+    """
+    Erzeugt:
+      - body 'seg_i' (Pivot am Body-Ursprung, Joint um y)
+      - verkürzte sichtbare Box mit Lücke 'gap'
+      - 2x Sites pro Ende (in/out) für 2 Tendons (±x-Außenkante)
+      - child-attachment 'seg_i_end' am Segmentende (z=seg_len)
+    Kette entlang +z. Kinematik bleibt unverändert.
+    """
+    # sichtbare Halblänge so, dass zwischen Segmenten die Lücke = gap entsteht
+    half_vis_len = seg_len/2.0#max(seg_len/2.0 - gap/2.0, 1e-6)
+
+    hx = float(half_width)
+    hy = float(half_width)
+    hz = float(half_vis_len)
+
+    # äußerste Kante radial (leicht nach innen)
+    r  = half_width
+    # z-Offsets für Sites
+    z_in  = 0
+    z_out = seg_len - 2*gap
+
+    # 2 Seile entlang ±x (y=0)
+    x_plus, y_plus =  (3*r) / 4, 0.0
+    x_minus, y_minus = (-3 *r)/4, 0.0
+
+    rgba = '0.6 0.75 0.95 0.3' if add_color else '0.2 0.7 0.2 0.3'
+
+    return f'''      <body name="seg_{i}" pos="0 0 0">
+        <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_{i}" type="box"
+              size="{hx:.6g} {hy:.6g} {hz:.6g}"
+              pos="0 0 {hz:.6g}"
+              rgba="{rgba}" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_{i}_0"  pos="{x_plus:.6g} {y_plus:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_out_{i}_0" pos="{x_plus:.6g} {y_plus:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_in_{i}_1"  pos="{x_minus:.6g} {y_minus:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_out_{i}_1" pos="{x_minus:.6g} {y_minus:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_{i}_end" pos="0 0 {seg_len:.6g}">
+'''
+
+def close_body_block():
+    # Schließt seg_i_end und seg_i
+    return '''        </body>
+      </body>
+'''
+
+def tendons_xml(num_segments):
+    parts = ['  <tendon>']
+    for k in range(NUM_CABLES):
+        parts.append(f'    <spatial name="tendon_{k}" width="0.001" rgba="1 0 0 1">')
+        for i in reversed(range(num_segments)):
+            parts.append(f'      <site site="site_in_{i}_{k}"/>')
+            parts.append(f'      <site site="site_out_{i}_{k}"/>')
+        parts.append('    </spatial>')
+    parts.append('  </tendon>\n')
+    return "\n".join(parts)
+
+def actuators_xml():
+    lines = ['  <actuator>']
+    # Tipp: ctrlrange grob anpassen; hängt von deiner Kettenlänge/Lücke ab
+    for k in range(NUM_CABLES):
+        lines.append(
+          f'    <position name="tendon_act_{k}" tendon="tendon_{k}" '
+          f'kp="200.0" forcerange="-200 0" ctrlrange="0.05 0.35"/>'
+        )
+    lines.append('  </actuator>\n')
+    return "\n".join(lines)
+
+def sensors_xml():
+    lines = ['  <sensor>']
+    for k in range(NUM_CABLES):
+        lines.append(f'    <tendonpos name="tendon{k}_pos" tendon="tendon_{k}"/>')
+        lines.append(f'    <tendonvel name="tendon{k}_vel" tendon="tendon_{k}"/>')
+        #lines.append(f'    <tendonfrc name="tendon{k}_frc" tendon="tendon_{k}"/>')
+    lines.append('  </sensor>\n')
+    return "\n".join(lines)
+
+
+
+def build_chain_xml(seg_lengths, seg_halfwidths, per_joint_angle_rad=None, model_name="spiral_chain"):
+    """
+    Erzeugt eine hierarchische Kette:
+      base
+        seg_0
+          seg_0_end
+            seg_1
+              seg_1_end
+                ...
+    Joint i sitzt am Beginn von seg_i (Pivot).
+    """
+    assert len(seg_lengths) == len(seg_halfwidths)
+    N = len(seg_lengths)
+
+    xml = [mjcf_header(model_name)]
+    indent = ""  # wir verwenden fixe Blocks mit Einrückungen oben
+
+    for i in reversed(range(N)):
+        add_color = (i % 2 == 0)
+        xml.append(body_block(i, seg_lengths[i], seg_halfwidths[i], add_color=add_color))
+
+    # und dann in der gleichen Reihenfolge wieder schließen:
+    for i in reversed(range(N)):
+        xml.append(close_body_block())
+
+    
+
+    # Keyframe (optional)
+    if per_joint_angle_rad is not None:
+        # qpos-Layout: Für reine 'hinge'-Kette gilt: qpos = [q1, q2, ..., qN]
+        # Wir nehmen die kumulativen Winkel (Pose der "Spirale")
+        cum = np.cumsum(per_joint_angle_rad)
+        qpos_str = " ".join(f"{np.degrees(v):.6g}" for v in cum)  # compiler angle="degree"
+        keyframe = f'''
+  <keyframe>
+    <key name="spiral_pose" qpos="{qpos_str}"/>
+  </keyframe>
+'''
+    else:
+        keyframe = ""
+
+    xml.append(worldbody_footer())
+
+
+    xml.append(tendons_xml(N))
+    xml.append(actuators_xml())
+    xml.append(sensors_xml())
+
+    xml.append(mjcf_footer())
+
+
+
+    # Füge Keyframe vor </mujoco> ein:
+    full = "".join(xml)
+    full = full.replace('</mujoco>', keyframe + '</mujoco>')
+    return full
+
+# =============================
+# 3) XML erzeugen & abspeichern
+# =============================
+xml_string = build_chain_xml(seg_lengths, seg_halfwidths, per_joint_angle_rad=per_joint_angle, model_name="spiral_chain")
+out_path = Path("spiral_chain.xml")
+out_path.write_text(xml_string, encoding="utf-8")
+
+print(f"\nMJCF exportiert nach: {out_path.resolve()}")

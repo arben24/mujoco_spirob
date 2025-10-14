@@ -1,0 +1,542 @@
+<mujoco model="spiral_chain">
+  <compiler/>
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <size njmax="1000" nconmax="1000"/>
+  <default>
+    <joint damping="0.02" limited="true" range="-30.17710225343591 30.17710225343591"/>
+    <geom  friction="0.8 0.1 0.1" density="1200" rgba="0.7 0.7 0.8 1" contype="1" conaffinity="0"/>
+  </default>
+  <worldbody>
+    <body name="base" pos="0 0 0">
+      <geom type="plane" size="2 2 0.1" rgba="0 0 1 0.6" contype="2" conaffinity="1"/>
+      <!-- Der eigentliche Ketten-Root wird hier als Kind erzeugt -->
+      <body name="seg_21" pos="0 0 0">
+        <joint name="j_21" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_21" type="box"
+              size="0.0285094 0.0285094 0.0138017"
+              pos="0 0 0.0138017"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_21_0"  pos="0.0213821 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_21_0" pos="0.0213821 0 0.0236033" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_21_1"  pos="-0.0213821 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_21_1" pos="-0.0213821 0 0.0236033" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_21_end" pos="0 0 0.0276033">
+      <body name="seg_20" pos="0 0 0">
+        <joint name="j_20" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_20" type="box"
+              size="0.0256764 0.0256764 0.0124302"
+              pos="0 0 0.0124302"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_20_0"  pos="0.0192573 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_20_0" pos="0.0192573 0 0.0208603" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_20_1"  pos="-0.0192573 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_20_1" pos="-0.0192573 0 0.0208603" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_20_end" pos="0 0 0.0248603">
+      <body name="seg_19" pos="0 0 0">
+        <joint name="j_19" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_19" type="box"
+              size="0.0231249 0.0231249 0.011195"
+              pos="0 0 0.011195"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_19_0"  pos="0.0173437 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_19_0" pos="0.0173437 0 0.0183899" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_19_1"  pos="-0.0173437 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_19_1" pos="-0.0173437 0 0.0183899" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_19_end" pos="0 0 0.0223899">
+      <body name="seg_18" pos="0 0 0">
+        <joint name="j_18" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_18" type="box"
+              size="0.0208269 0.0208269 0.0100825"
+              pos="0 0 0.0100825"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_18_0"  pos="0.0156202 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_18_0" pos="0.0156202 0 0.016165" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_18_1"  pos="-0.0156202 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_18_1" pos="-0.0156202 0 0.016165" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_18_end" pos="0 0 0.020165">
+      <body name="seg_17" pos="0 0 0">
+        <joint name="j_17" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_17" type="box"
+              size="0.0187573 0.0187573 0.00908057"
+              pos="0 0 0.00908057"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_17_0"  pos="0.014068 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_17_0" pos="0.014068 0 0.0141611" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_17_1"  pos="-0.014068 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_17_1" pos="-0.014068 0 0.0141611" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_17_end" pos="0 0 0.0181611">
+      <body name="seg_16" pos="0 0 0">
+        <joint name="j_16" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_16" type="box"
+              size="0.0168933 0.0168933 0.00817822"
+              pos="0 0 0.00817822"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_16_0"  pos="0.01267 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_16_0" pos="0.01267 0 0.0123564" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_16_1"  pos="-0.01267 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_16_1" pos="-0.01267 0 0.0123564" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_16_end" pos="0 0 0.0163564">
+      <body name="seg_15" pos="0 0 0">
+        <joint name="j_15" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_15" type="box"
+              size="0.0152146 0.0152146 0.00736553"
+              pos="0 0 0.00736553"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_15_0"  pos="0.011411 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_15_0" pos="0.011411 0 0.0107311" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_15_1"  pos="-0.011411 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_15_1" pos="-0.011411 0 0.0107311" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_15_end" pos="0 0 0.0147311">
+      <body name="seg_14" pos="0 0 0">
+        <joint name="j_14" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_14" type="box"
+              size="0.0137027 0.0137027 0.00663361"
+              pos="0 0 0.00663361"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_14_0"  pos="0.010277 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_14_0" pos="0.010277 0 0.00926721" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_14_1"  pos="-0.010277 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_14_1" pos="-0.010277 0 0.00926721" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_14_end" pos="0 0 0.0132672">
+      <body name="seg_13" pos="0 0 0">
+        <joint name="j_13" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_13" type="box"
+              size="0.012341 0.012341 0.00597441"
+              pos="0 0 0.00597441"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_13_0"  pos="0.00925579 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_13_0" pos="0.00925579 0 0.00794882" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_13_1"  pos="-0.00925579 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_13_1" pos="-0.00925579 0 0.00794882" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_13_end" pos="0 0 0.0119488">
+      <body name="seg_12" pos="0 0 0">
+        <joint name="j_12" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_12" type="box"
+              size="0.0111147 0.0111147 0.00538072"
+              pos="0 0 0.00538072"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_12_0"  pos="0.00833602 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_12_0" pos="0.00833602 0 0.00676144" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_12_1"  pos="-0.00833602 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_12_1" pos="-0.00833602 0 0.00676144" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_12_end" pos="0 0 0.0107614">
+      <body name="seg_11" pos="0 0 0">
+        <joint name="j_11" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_11" type="box"
+              size="0.0100102 0.0100102 0.00484603"
+              pos="0 0 0.00484603"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_11_0"  pos="0.00750765 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_11_0" pos="0.00750765 0 0.00569206" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_11_1"  pos="-0.00750765 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_11_1" pos="-0.00750765 0 0.00569206" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_11_end" pos="0 0 0.00969206">
+      <body name="seg_10" pos="0 0 0">
+        <joint name="j_10" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_10" type="box"
+              size="0.00901547 0.00901547 0.00436447"
+              pos="0 0 0.00436447"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_10_0"  pos="0.0067616 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_10_0" pos="0.0067616 0 0.00472894" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_10_1"  pos="-0.0067616 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_10_1" pos="-0.0067616 0 0.00472894" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_10_end" pos="0 0 0.00872894">
+      <body name="seg_9" pos="0 0 0">
+        <joint name="j_9" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_9" type="box"
+              size="0.00811959 0.00811959 0.00393076"
+              pos="0 0 0.00393076"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_9_0"  pos="0.00608969 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_9_0" pos="0.00608969 0 0.00386153" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_9_1"  pos="-0.00608969 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_9_1" pos="-0.00608969 0 0.00386153" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_9_end" pos="0 0 0.00786153">
+      <body name="seg_8" pos="0 0 0">
+        <joint name="j_8" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_8" type="box"
+              size="0.00731273 0.00731273 0.00354016"
+              pos="0 0 0.00354016"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_8_0"  pos="0.00548454 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_8_0" pos="0.00548454 0 0.00308031" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_8_1"  pos="-0.00548454 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_8_1" pos="-0.00548454 0 0.00308031" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_8_end" pos="0 0 0.00708031">
+      <body name="seg_7" pos="0 0 0">
+        <joint name="j_7" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_7" type="box"
+              size="0.00658605 0.00658605 0.00318836"
+              pos="0 0 0.00318836"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_7_0"  pos="0.00493953 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_7_0" pos="0.00493953 0 0.00237673" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_7_1"  pos="-0.00493953 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_7_1" pos="-0.00493953 0 0.00237673" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_7_end" pos="0 0 0.00637673">
+      <body name="seg_6" pos="0 0 0">
+        <joint name="j_6" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_6" type="box"
+              size="0.00593158 0.00593158 0.00287153"
+              pos="0 0 0.00287153"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_6_0"  pos="0.00444868 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_6_0" pos="0.00444868 0 0.00174306" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_6_1"  pos="-0.00444868 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_6_1" pos="-0.00444868 0 0.00174306" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_6_end" pos="0 0 0.00574306">
+      <body name="seg_5" pos="0 0 0">
+        <joint name="j_5" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_5" type="box"
+              size="0.00534214 0.00534214 0.00258618"
+              pos="0 0 0.00258618"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_5_0"  pos="0.00400661 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_5_0" pos="0.00400661 0 0.00117236" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_5_1"  pos="-0.00400661 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_5_1" pos="-0.00400661 0 0.00117236" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_5_end" pos="0 0 0.00517236">
+      <body name="seg_4" pos="0 0 0">
+        <joint name="j_4" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_4" type="box"
+              size="0.00481129 0.00481129 0.00232919"
+              pos="0 0 0.00232919"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_4_0"  pos="0.00360846 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_4_0" pos="0.00360846 0 0.000658372" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_4_1"  pos="-0.00360846 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_4_1" pos="-0.00360846 0 0.000658372" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_4_end" pos="0 0 0.00465837">
+      <body name="seg_3" pos="0 0 0">
+        <joint name="j_3" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_3" type="box"
+              size="0.00433318 0.00433318 0.00209773"
+              pos="0 0 0.00209773"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_3_0"  pos="0.00324988 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_3_0" pos="0.00324988 0 0.00019546" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_3_1"  pos="-0.00324988 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_3_1" pos="-0.00324988 0 0.00019546" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_3_end" pos="0 0 0.00419546">
+      <body name="seg_2" pos="0 0 0">
+        <joint name="j_2" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_2" type="box"
+              size="0.00390258 0.00390258 0.00188927"
+              pos="0 0 0.00188927"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_2_0"  pos="0.00292694 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_2_0" pos="0.00292694 0 -0.000221451" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_2_1"  pos="-0.00292694 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_2_1" pos="-0.00292694 0 -0.000221451" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_2_end" pos="0 0 0.00377855">
+      <body name="seg_1" pos="0 0 0">
+        <joint name="j_1" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_1" type="box"
+              size="0.00351477 0.00351477 0.00170153"
+              pos="0 0 0.00170153"
+              rgba="0.2 0.7 0.2 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_1_0"  pos="0.00263608 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_1_0" pos="0.00263608 0 -0.000596933" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_1_1"  pos="-0.00263608 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_1_1" pos="-0.00263608 0 -0.000596933" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_1_end" pos="0 0 0.00340307">
+      <body name="seg_0" pos="0 0 0">
+        <joint name="j_0" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+
+        <!-- sichtbare, kollisionslose Box mit Lücke -->
+        <geom name="g_0" type="box"
+              size="0.0031655 0.0031655 0.00153245"
+              pos="0 0 0.00153245"
+              rgba="0.6 0.75 0.95 0.3" contype="1" conaffinity="0"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_0_0"  pos="0.00237413 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_0_0" pos="0.00237413 0 -0.000935102" size="0.001" rgba="1 1 0 1"/>
+        <site name="site_in_0_1"  pos="-0.00237413 0 0"  size="0.001" rgba="1 1 0 1"/>
+        <site name="site_out_0_1" pos="-0.00237413 0 -0.000935102" size="0.001" rgba="1 1 0 1"/>
+
+        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
+        <body name="seg_0_end" pos="0 0 0.0030649">
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <tendon>
+    <spatial name="tendon_0" width="0.001" rgba="1 0 0 1">
+      <site site="site_in_21_0"/>
+      <site site="site_out_21_0"/>
+      <site site="site_in_20_0"/>
+      <site site="site_out_20_0"/>
+      <site site="site_in_19_0"/>
+      <site site="site_out_19_0"/>
+      <site site="site_in_18_0"/>
+      <site site="site_out_18_0"/>
+      <site site="site_in_17_0"/>
+      <site site="site_out_17_0"/>
+      <site site="site_in_16_0"/>
+      <site site="site_out_16_0"/>
+      <site site="site_in_15_0"/>
+      <site site="site_out_15_0"/>
+      <site site="site_in_14_0"/>
+      <site site="site_out_14_0"/>
+      <site site="site_in_13_0"/>
+      <site site="site_out_13_0"/>
+      <site site="site_in_12_0"/>
+      <site site="site_out_12_0"/>
+      <site site="site_in_11_0"/>
+      <site site="site_out_11_0"/>
+      <site site="site_in_10_0"/>
+      <site site="site_out_10_0"/>
+      <site site="site_in_9_0"/>
+      <site site="site_out_9_0"/>
+      <site site="site_in_8_0"/>
+      <site site="site_out_8_0"/>
+      <site site="site_in_7_0"/>
+      <site site="site_out_7_0"/>
+      <site site="site_in_6_0"/>
+      <site site="site_out_6_0"/>
+      <site site="site_in_5_0"/>
+      <site site="site_out_5_0"/>
+      <site site="site_in_4_0"/>
+      <site site="site_out_4_0"/>
+      <site site="site_in_3_0"/>
+      <site site="site_out_3_0"/>
+      <site site="site_in_2_0"/>
+      <site site="site_out_2_0"/>
+      <site site="site_in_1_0"/>
+      <site site="site_out_1_0"/>
+      <site site="site_in_0_0"/>
+      <site site="site_out_0_0"/>
+    </spatial>
+    <spatial name="tendon_1" width="0.001" rgba="1 0 0 1">
+      <site site="site_in_21_1"/>
+      <site site="site_out_21_1"/>
+      <site site="site_in_20_1"/>
+      <site site="site_out_20_1"/>
+      <site site="site_in_19_1"/>
+      <site site="site_out_19_1"/>
+      <site site="site_in_18_1"/>
+      <site site="site_out_18_1"/>
+      <site site="site_in_17_1"/>
+      <site site="site_out_17_1"/>
+      <site site="site_in_16_1"/>
+      <site site="site_out_16_1"/>
+      <site site="site_in_15_1"/>
+      <site site="site_out_15_1"/>
+      <site site="site_in_14_1"/>
+      <site site="site_out_14_1"/>
+      <site site="site_in_13_1"/>
+      <site site="site_out_13_1"/>
+      <site site="site_in_12_1"/>
+      <site site="site_out_12_1"/>
+      <site site="site_in_11_1"/>
+      <site site="site_out_11_1"/>
+      <site site="site_in_10_1"/>
+      <site site="site_out_10_1"/>
+      <site site="site_in_9_1"/>
+      <site site="site_out_9_1"/>
+      <site site="site_in_8_1"/>
+      <site site="site_out_8_1"/>
+      <site site="site_in_7_1"/>
+      <site site="site_out_7_1"/>
+      <site site="site_in_6_1"/>
+      <site site="site_out_6_1"/>
+      <site site="site_in_5_1"/>
+      <site site="site_out_5_1"/>
+      <site site="site_in_4_1"/>
+      <site site="site_out_4_1"/>
+      <site site="site_in_3_1"/>
+      <site site="site_out_3_1"/>
+      <site site="site_in_2_1"/>
+      <site site="site_out_2_1"/>
+      <site site="site_in_1_1"/>
+      <site site="site_out_1_1"/>
+      <site site="site_in_0_1"/>
+      <site site="site_out_0_1"/>
+    </spatial>
+  </tendon>
+  <actuator>
+    <position name="tendon_act_0" tendon="tendon_0" kp="200.0" forcerange="-200 0" ctrlrange="0.05 0.35"/>
+    <position name="tendon_act_1" tendon="tendon_1" kp="200.0" forcerange="-200 0" ctrlrange="0.05 0.35"/>
+  </actuator>
+  <sensor>
+    <tendonpos name="tendon0_pos" tendon="tendon_0"/>
+    <tendonvel name="tendon0_vel" tendon="tendon_0"/>
+    <tendonpos name="tendon1_pos" tendon="tendon_1"/>
+    <tendonvel name="tendon1_vel" tendon="tendon_1"/>
+  </sensor>
+
+
+  <keyframe>
+    <key name="spiral_pose" qpos="30.1771 60.3542 90.5313 120.708 150.886 181.063 211.24 241.417 271.594 301.771 331.948 362.125 392.302 422.479 452.657 482.834 513.011 543.188 573.365 603.542 633.719 663.896"/>
+  </keyframe>
+</mujoco>
