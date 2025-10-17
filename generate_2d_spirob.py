@@ -10,9 +10,9 @@ import pandas as pd
 # 1) Parameter & Mathematik
 # ==========================
 L_target   = 0.25               # gewünschte Mittelachsenlänge [m]
-tip_d      = 0.006              # Spitzendurchmesser [m]
-base_d     = 0.060              # Basisdurchmesser [m]
-Delta_theta = np.deg2rad(30)    # Diskretisierungsschritt (30°)
+tip_d      = 0.01              # Spitzendurchmesser [m]
+base_d     = 0.080              # Basisdurchmesser [m]
+Delta_theta = np.deg2rad(20)    # Diskretisierungsschritt (30°)
 
 # --- Hilfsfunktionen aus deiner Vorlage ---
 def rho(theta, a, b):
@@ -42,12 +42,18 @@ def L_from_b(b, base_d, tip_d):
 def f_of_b(b):
     return L_from_b(b, base_d, tip_d) - L_target
 
+def taper_angle_phi(b):
+    num = b * (np.exp(2*np.pi*b) - 1.0)
+    den = np.sqrt(b**2 + 1.0) * (np.exp(2*np.pi*b) + 1.0)
+    return 2.0 * np.arctan(num / den)  # in radians
+
 # --- Solve b with bisect ---
 b_sol   = bisect(f_of_b, 1e-4, 1.0, xtol=1e-12, rtol=1e-12, maxiter=200)
 theta0  = theta0_from_ratio(b_sol, base_d, tip_d)
 print(theta0)
 a       = a_from_tip(b_sol, tip_d)
 L_check = length_central(a, b_sol, theta0)
+phi_taper = taper_angle_phi(b_sol)
 
 # Anzahl Segmente aus θ-Spanne mit Mindestanzahl
 N = 1 / (b_sol * Delta_theta) * np.log(base_d / tip_d)
@@ -87,12 +93,11 @@ print(w_vals)
 seg_lengths = (Y_vals[:-1] - Y_vals[1:])  # positive Werte
 
 # Querschnitts-Halbe (gemittelt pro Segment)
-seg_halfwidths = w_vals
+seg_halfwidths = w_vals[:-1]
 print("=========================")
-print(w_vals[:-1])
-print(w_vals[1:])
 print(seg_halfwidths)
-print(len(seg_halfwidths[:-1]))
+
+
 
 
 print("=========================")
@@ -132,11 +137,14 @@ print("=========================")
 per_joint_angle = np.full(N, theta0 / N)   # gleichmäßig verteilte Winkel summieren sich zu theta0
 qpos_angles = np.cumsum(per_joint_angle)   # kumuliert, nur für Keyframe (rein visuell/praktisch)
 
+beta = np.exp(b_sol*new_Delta_theta)
+
 print("Gelöste Parameter:")
 print(f"  b      = {b_sol:.6g}")
 print(f"  theta0 = {theta0:.6g} rad = {np.rad2deg(theta0):.2f} deg")
 print(f"  a      = {a:.6g}")
 print(f"  L_check= {L_check:.6g} m (Ziel {L_target} m)  |Δ|={abs(L_check-L_target):.3e}")
+print(f"  beta   = {beta:.6g}")
 
 # ========================================
 # 2) MuJoCo-MJCF-Generator (Box-Kette)
@@ -147,7 +155,7 @@ def mjcf_header(model_name="spiral_chain"):
   <option timestep="0.002" gravity="0 0 -9.81"/>
   <size njmax="1000" nconmax="1000"/>
   <default>
-    <joint damping="0.02" limited="true" range="{-np.rad2deg(new_Delta_theta)} {np.rad2deg(new_Delta_theta)}"/>
+    <joint damping="0.02" limited="true" range="{-np.rad2deg(new_Delta_theta)+1} {np.rad2deg(new_Delta_theta)-1}"/>
     <geom  friction="0.8 0.1 0.1" density="1200" rgba="0.7 0.7 0.8 1" contype="1" conaffinity="0"/>
   </default>
   <worldbody>
@@ -169,10 +177,6 @@ NUM_CABLES = 2
 
 # ---- feste Einstellungen für 2 Seile (±x) ----
 SITE_SIZE      = 0.001     # sichtbare Größe der Site-Kugeln
-RADIAL_MARGIN  = 0.0002    # minimal nach innen von der äußersten Kante
-Z_IN_MARGIN    = 0.0008    # etwas weg vom Gelenk (z=0)
-Z_OUT_MARGIN   = 0.0008    # etwas weg vom Attachment (z=seg_len)
-
 
 def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
     """
@@ -186,24 +190,38 @@ def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
     # sichtbare Halblänge so, dass zwischen Segmenten die Lücke = gap entsteht
     half_vis_len = seg_len/2.0#max(seg_len/2.0 - gap/2.0, 1e-6)
 
+    hole_size = 0.005
+
     hx = float(half_width)
     hy = float(half_width)
     hz = float(half_vis_len)
 
-    # äußerste Kante radial (leicht nach innen)
-    r  = half_width
-    # z-Offsets für Sites
-    z_in  = 0
-    z_out = seg_len - 2*gap
+    #d = half_width * beta -0.005
 
-    # 2 Seile entlang ±x (y=0)
-    x_plus, y_plus =  (3*r) / 4, 0.0
-    x_minus, y_minus = (-3 *r)/4, 0.0
+    d = half_width * beta - 0.003     #x position of the hole of an segment before the current one 
+
+    x_in = d * np.cos(new_Delta_theta)
+
+    z_in = d * np.sin(new_Delta_theta)
+    y_in = 0
+
+    #x_out = half_width - 0.003
+    y_out = 0
+    z_out = seg_len
+    # x_test = 1
+    # hyp = seg_len / np.cos(phi_taper)
+    # x_out_z = hyp * np.sin(phi_taper)
+    # x_out = d - x_out_z
+    # print("-----------")
+    # print(x_test)
+    # print(d-x_in)
+    x_out = half_width - 0.003
+    #x_out = d - (hyp * np.sin(phi_taper))
 
     rgba = '0.6 0.75 0.95 0.3' if add_color else '0.2 0.7 0.2 0.3'
 
     return f'''      <body name="seg_{i}" pos="0 0 0">
-        <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.00" damping="0.02"/>
+        <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.0" damping="0.06" limited="true" range="{-np.rad2deg(new_Delta_theta)+1} {np.rad2deg(new_Delta_theta)-1}"/>
 
         <!-- sichtbare, kollisionslose Box mit Lücke -->
         <geom name="g_{i}" type="box"
@@ -212,10 +230,10 @@ def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
               rgba="{rgba}" contype="1" conaffinity="0"/>
 
         <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
-        <site name="site_in_{i}_0"  pos="{x_plus:.6g} {y_plus:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
-        <site name="site_out_{i}_0" pos="{x_plus:.6g} {y_plus:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
-        <site name="site_in_{i}_1"  pos="{x_minus:.6g} {y_minus:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
-        <site name="site_out_{i}_1" pos="{x_minus:.6g} {y_minus:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_out_{i}_1" pos="{-x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
 
         <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
         <body name="seg_{i}_end" pos="0 0 {seg_len:.6g}">
@@ -287,20 +305,6 @@ def build_chain_xml(seg_lengths, seg_halfwidths, per_joint_angle_rad=None, model
 
     
 
-    # Keyframe (optional)
-    if per_joint_angle_rad is not None:
-        # qpos-Layout: Für reine 'hinge'-Kette gilt: qpos = [q1, q2, ..., qN]
-        # Wir nehmen die kumulativen Winkel (Pose der "Spirale")
-        cum = np.cumsum(per_joint_angle_rad)
-        qpos_str = " ".join(f"{np.degrees(v):.6g}" for v in cum)  # compiler angle="degree"
-        keyframe = f'''
-  <keyframe>
-    <key name="spiral_pose" qpos="{qpos_str}"/>
-  </keyframe>
-'''
-    else:
-        keyframe = ""
-
     xml.append(worldbody_footer())
 
 
@@ -314,7 +318,7 @@ def build_chain_xml(seg_lengths, seg_halfwidths, per_joint_angle_rad=None, model
 
     # Füge Keyframe vor </mujoco> ein:
     full = "".join(xml)
-    full = full.replace('</mujoco>', keyframe + '</mujoco>')
+    #full = full.replace('</mujoco>', keyframe + '</mujoco>')
     return full
 
 # =============================
