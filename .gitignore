@@ -1,0 +1,80 @@
+# =========================================
+#   Gitignore für Python-Projekt (math_spirob)
+# =========================================
+
+# --- Projekt-spezifisch ---
+# XML- und CSV-Dateien ausschließen
+*.xml
+*.XML
+*.csv
+*.CSV
+
+# --- Python Build Artefakte ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# --- Virtual Environments ---
+.env
+.venv
+venv/
+env/
+ENV/
+.venv*/
+venv*/
+
+# --- Distribution / Packaging ---
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Test / Coverage / Reports ---
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+junit.xml
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Mac / Windows ---
+.DS_Store
+Thumbs.db
+
+# --- Logs / Temp ---
+*.log
+*.tmp
+*.bak
+
+# --- Jupyter / IPython ---
+.ipynb_checkpoints/
+*.ipynb
+
+# --- Optional: lokale Dateien ---
+*.local
+*.old

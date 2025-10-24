@@ -81,7 +81,7 @@ b_sol = bisect(f_of_b, 1e-4, 1.0, xtol=1e-12, rtol=1e-12, maxiter=100)
 theta0 = theta0_from_ratio(b_sol, base_d, tip_d)
 a = a_from_tip(b_sol, tip_d)
 L_check = length_central(a, b_sol, theta0)
-phi = taper_angle_phi(b_sol)  # NEW
+phi = taper_angle_phi(b_sol)  
 
 
 print("Gelöste Parameter:")
