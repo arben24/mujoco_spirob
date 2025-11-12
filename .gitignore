@@ -49,3 +49,5 @@ Thumbs.db
 # --- Weitere Dateiformate ausschließen ---
 *.xml
 *.csv
+
+MUJOCO_LOG.TXT
