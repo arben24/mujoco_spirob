@@ -1,80 +1,51 @@
-# =========================================
-#   Gitignore für Python-Projekt (math_spirob)
-# =========================================
-
-# --- Projekt-spezifisch ---
-# XML- und CSV-Dateien ausschließen
-*.xml
-*.XML
-*.csv
-*.CSV
-
-# --- Python Build Artefakte ---
+# --- Python generelles ---
 __pycache__/
 *.py[cod]
-*$py.class
 *.pyo
-*.pyd
+*.so
 
-# --- Virtual Environments ---
-.env
-.venv
+# --- Virtuelle Umgebungen ---
+.venv/
 venv/
-env/
-ENV/
-.venv*/
-venv*/
+.env/
+
+# --- uv Build Cache ---
+.uv/
+uv.lock
 
 # --- Distribution / Packaging ---
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
 *.egg-info/
-.installed.cfg
-*.egg
+.eggs/
 
-# --- Test / Coverage / Reports ---
-htmlcov/
-.tox/
-.nox/
+# --- Sphinx-Dokumentation ---
+docs/build/
+docs/_build/
+docs/doctrees/
+
+# --- Testkram ---
 .coverage
+htmlcov/
 .coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-junit.xml
 
-# --- Editor / IDE ---
+# --- Editor / IDE Files ---
 .vscode/
 .idea/
 *.swp
-*.swo
+*~
+*.iml
 
-# --- Mac / Windows ---
+# --- OS Files ---
 .DS_Store
 Thumbs.db
 
-# --- Logs / Temp ---
+# --- Logs ---
 *.log
-*.tmp
-*.bak
 
-# --- Jupyter / IPython ---
+# --- Jupyter (falls mal benutzt) ---
 .ipynb_checkpoints/
-*.ipynb
 
-# --- Optional: lokale Dateien ---
-*.local
-*.old
+# --- Weitere Dateiformate ausschließen ---
+*.xml
+*.csv

@@ -2,14 +2,14 @@ import numpy as np
 from scipy.optimize import bisect
 from pathlib import Path
 import pandas as pd
-import math_spirob as ms  # für Hilfsfunktionen
+import math_spirob.math_spirob as ms  # für Hilfsfunktionen
 
 # ==========================
 # 1) Parameter & Mathematik
 # ==========================
-L_target   = 0.26               # gewünschte Mittelachsenlänge [m]
+L_target   = 0.30               # gewünschte Mittelachsenlänge [m]
 tip_d      = 0.01              # Spitzendurchmesser [m]
-base_d     = 0.060              # Basisdurchmesser [m]
+base_d     = 0.06              # Basisdurchmesser [m]
 Delta_theta = np.deg2rad(30)    # Diskretisierungsschritt (30°)
 
 #==========================
