@@ -24,12 +24,15 @@ __all__ = [
     "taper_angle_phi",
     "SpiralParams",
     "make_f_of_b",
+    "distance_point_line_from_origin",
+    "closest_point_on_line_to_origin",
+    "line_unit_direction",
+    "circle_radius_for_central_angle",
+    "intersection_points_circle_line",
+    "angle_between_rays",
+    "solve_for_points",
 ]
 
-
-# ----------------------------------------------------------------------
-# Reine Funktions-Variante
-# ----------------------------------------------------------------------
 
 def rho(theta: float | np.ndarray, a: float, b: float) -> float | np.ndarray:
     """
@@ -348,9 +351,6 @@ def taper_angle_phi(b: float) -> float:
     return 2.0 * np.arctan(num / den)
 
 
-# ----------------------------------------------------------------------
-# Komfort: Parameter-Container + Factory
-# ----------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class SpiralParams:
@@ -693,25 +693,3 @@ def solve_for_points(
 
 
 
-if __name__ == "__main__":
-    # ===== Beispiel =====
-    # Gerade in Normalform: a x + b y + c = 0
-    # Beispiel: y = m x + b0  ->  m x - y + b0 = 0  => a=m, b=-1, c=b0
-    # Hier z.B.: y = -1.5 x + 4  ->  a=-1.5, b=-1, c=4
-
-    phi = 11
-    phi_rad = np.radians(phi)
-    d = 0.01
-
-    a_line, b_line, c_line = -np.tan(np.pi/2 - phi_rad), -1.0, np.tan(np.pi/2 - phi_rad) * (d)
-    theta = 30.0  # gewünschter Winkel zwischen den Strahlen OC und OD
-
-    res = solve_for_points(a_line, b_line, c_line, theta)
-
-    print("Gegebene Gerade: {:.6f} x + {:.6f} y + {:.6f} = 0".format(a_line, b_line, c_line))
-    print("Gewünschter Winkel: {:.3f}°".format(theta))
-    print("Abstand d zum Ursprung: {:.6f}".format(res["d"]))
-    print("Benötigter Radius r:    {:.6f}".format(res["r"]))
-    print("Schnittpunkt C:         ({:.6f}, {:.6f})".format(*res["C"]))
-    print("Schnittpunkt D:         ({:.6f}, {:.6f})".format(*res["D"]))
-    print("Prüfwinkel ∠COD:        {:.6f}°".format(res["winkel_deg"]))

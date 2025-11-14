@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 # Importiere direkt aus deiner einen Datei:
-from math_spirob import (
+from math_spirob.math_spirob import (
     # Spiral-Funktionen
     rho, rho_c, length_central, theta0_from_ratio, a_from_tip,
     L_from_b, f_of_b, taper_angle_phi,
@@ -11,11 +11,9 @@ from math_spirob import (
     distance_point_line_from_origin, closest_point_on_line_to_origin,
     line_unit_direction, circle_radius_for_central_angle,
     intersection_points_circle_line, angle_between_rays, solve_for_points,
-    # Optional: Param-Container/Factory falls vorhanden
+    
     SpiralParams, make_f_of_b,
 )
-
-# ---------- Spiral: Basischecks ----------
 
 def test_rho_scalar_and_array():
     assert np.isclose(rho(0.0, a=1.0, b=0.2), 1.0)
@@ -23,6 +21,14 @@ def test_rho_scalar_and_array():
     out = rho(th, a=1.0, b=0.2)
     assert out.shape == th.shape
     assert np.isclose(out[0], 1.0)
+
+def test_rho_c_scalar():
+    assert np.isclose(rho_c(0, 1, 0.1), 0.5 * 1 * (np.exp(2*np.pi*0.1)+1))
+
+def test_rho_c_array():
+    th = np.array([0, np.pi])
+    res = rho_c(th, 1, 0.1)
+    assert res.shape == th.shape
 
 def test_theta0_a_tip_length_consistency():
     b = 0.2
@@ -47,8 +53,6 @@ def test_factory_callable():
 def test_taper_angle_phi_range():
     phi = taper_angle_phi(0.2)
     assert 0.0 <= phi <= math.pi
-
-# ---------- Geometrie: Checks ----------
 
 def test_distance_and_footpoint():
     # Gerade: y - 2 = 0  -> Abstand 2, Lotfuß (0,2)

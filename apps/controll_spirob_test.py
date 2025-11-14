@@ -33,15 +33,3 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     time_until_next_step = model.opt.timestep - (time.time() - step_start)
     if time_until_next_step > 0:
       time.sleep(time_until_next_step)
-
-# while data.time < 10:  # Simulation für 10 Sekunden
-#     viewer = viewer.launch_passive(model, data)
-#     while viewer.is_running():
-        
-#         #data.ctrl[0] = 0.1
-#         viewer.sync()
-#     # Beispiel: Position eines Geoms ausgeben
-#     #print(data.geom_xpos)
-#     print(f"Zeit: {data.time:.2f}, Position: {data.body('seg_16').xpos.copy()}")
-#     #print(data.sensordata)
-#     time.sleep(0.1)

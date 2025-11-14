@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.optimize import bisect
 from pathlib import Path
-import pandas as pd
 import math_spirob.math_spirob as ms  # für Hilfsfunktionen
 
 # ==========================
@@ -14,109 +13,75 @@ Delta_theta = np.deg2rad(30)    # Diskretisierungsschritt (30°)
 
 #==========================
 
-
-
-
-# Gegebene Projektparameter (Beispiele – bei dir kommen die ja bereits aus deinem Code)
-# base_d, tip_d, L_target, Delta_theta = ...
+# Parameterobjekt
 params = ms.SpiralParams(base_d=base_d, tip_d=tip_d, L_target=L_target)
 
-# --- Solve b with bisect (ohne Globals) ---
-f = ms.make_f_of_b(params)  # f(b) = L(b) - L_target
+# --- Solve b ---
+f = ms.make_f_of_b(params)
 b_sol = bisect(f, 1e-4, 1.0, xtol=1e-12, rtol=1e-12, maxiter=200)
 
-theta0  = ms.theta0_from_ratio(b_sol, base_d=params.base_d, tip_d=params.tip_d)
-a       = ms.a_from_tip(b_sol, tip_d=params.tip_d)
+# Abgeleitete Größen
+theta0 = ms.theta0_from_ratio(b_sol, base_d=params.base_d, tip_d=params.tip_d)
+a      = ms.a_from_tip(b_sol, tip_d=params.tip_d)
 L_check = ms.length_central(a, b_sol, theta0)
 phi_taper = ms.taper_angle_phi(b_sol)
-print("Taper angle phi (deg):", np.rad2deg(phi_taper))
 
-# Anzahl Segmente aus θ-Spanne
-# (Formel wie bei dir, nur ohne implizite Globals)
+# Diskretisierung
 N_cont = (1.0 / (b_sol * Delta_theta)) * np.log(params.base_d / params.tip_d)
-print("==========================")
-print("Anzahl Segmente N =", N_cont)
-
-# sinnvolle Rundung + Mindestwert 1
 N = max(1, int(np.round(N_cont)))
-print("Anzahl Segmente gerundet N =", N)
-
 new_Delta_theta = theta0 / N
-print("Neuer Diskretisierungsschritt Δθ =", np.rad2deg(new_Delta_theta), "°", f"({new_Delta_theta:.6g} rad)")
-print("===========================")
-
-# Gleichmäßige Diskretisierung in θ
 thetas = np.linspace(0.0, theta0, N + 1)
-print(len(thetas))
 
-# Breiten- und Längenfunktionen (alle mit expliziten Parametern)
+# Breiten- und Längenfunktionen
 delta_vals = ms.delta_width(thetas, a=a, b=b_sol)
-
-# s(θ) = (sqrt(1+b^2)/b) * (rho_c(θ) - rho_c(0))
 factor = np.sqrt(b_sol**2 + 1.0) / b_sol
 s_vals = factor * (ms.rho_c(thetas, a=a, b=b_sol) - ms.rho_c(0.0, a=a, b=b_sol))
-
-# 0 an der Basis, L an der Spitze (wie bei dir)
 Y_vals = L_check - s_vals
-w_vals = 0.5 * delta_vals  # halbe Breite
+w_vals = 0.5 * delta_vals
 
-# Segmentlängen in "entrollter" Darstellung:
-seg_lengths = (Y_vals[:-1] - Y_vals[1:])  # positive Werte
-
-# Querschnitts-Halbe (gemittelt pro Segment)
+seg_lengths = Y_vals[:-1] - Y_vals[1:]
 seg_halfwidths = w_vals[:-1]
-print("=========================")
-print(seg_halfwidths)
 
+beta = np.exp(b_sol * new_Delta_theta)
 
-beta = np.exp(b_sol*new_Delta_theta)
-
-
-
-
-print("=========================")
-print("Spiral-Parameter & Diskretisierung")
-print("=========================")
-print(f"  Ziel-Länge L_target = {L_target} m")
-print(f"  Basis-Durchmesser    = {base_d} m")
-print(f"  Spitze-Durchmesser   = {tip_d} m")
-print(f"  Diskretisierungsschritt Δθ = {np.rad2deg(new_Delta_theta):.1f}°")
-print(f"  Gelöste Parameter:")
-print(f"    b       = {b_sol:.6g}")
-print(f"    theta0  = {theta0:.6g} rad = {np.rad2deg(theta0):.2f} deg")
-print(f"    a       = {a:.6g}")
-print(f"    L_check = {L_check:.6g} m  (Ziel {L_target} m)  |Δ|={abs(L_check-L_target):.3e}")
-print(f"  Diskretisierung in N={N} Segmente")
-print(f"    mittlere Segmentlänge = {np.mean(seg_lengths):.6g} m")
-print(f"    min Segmentlänge      = {np.min(seg_lengths):.6g} m")
-print(f"    max Segmentlänge      = {np.max(seg_lengths):.6g} m")
-print(f"    mittlere Halbe Breite = {np.mean(seg_halfwidths):.6g} m")
-print(f"    min Halbe Breite      = {np.min(seg_halfwidths):.6g} m")
-print(f"    max Halbe Breite      = {np.max(seg_halfwidths):.6g} m")
-print("=========================")
-
-print("Zwischenwerte")
-print(" theta (rad) |   s (m)   |   Y (m)   | delta (m) |  w=delta/2 (m)")
-for i in range(len(thetas)):
-    print(f" {thetas[i]:10.6g} | {s_vals[i]:9.6g} | {Y_vals[i]:9.6g} | {delta_vals[i]:9.6g} | {w_vals[i]:9.6g}")
-print("=========================")
-
-print("Segmentwerte")
-print(" seg |  seg_len (m) | half_width (m)")
-for i in range(N):
-    print(f" {i:3d} | {seg_lengths[i]:12.6g} | {seg_halfwidths[i]:14.6g}")
-print("=========================")
-
+# --- Alles schön zentral ausgeben ---
+print("="*40)
+print("SPIRALENPARAMETER & DISKRETISIERUNG")
+print("="*40)
+print(f"Ziel-Länge L_target       = {L_target:.6g} m")
+print(f"Basis-Durchmesser          = {base_d:.6g} m")
+print(f"Spitze-Durchmesser         = {tip_d:.6g} m")
+print(f"Diskretisierungsschritt Δθ = {np.rad2deg(new_Delta_theta):.6f}° ({new_Delta_theta:.6g} rad)")
+print(f"Anzahl Segmente N          = {N} (ungerundet: {N_cont:.6g})\n")
 
 print("Gelöste Parameter:")
-print(f"  b      = {b_sol:.6g}")
-print(f"  theta0 = {theta0:.6g} rad = {np.rad2deg(theta0):.2f} deg")
-print(f"  a      = {a:.6g}")
-print(f"  L_check= {L_check:.6g} m (Ziel {L_target} m)  |Δ|={abs(L_check-L_target):.3e}")
-print(f"  beta   = {beta:.6g}")
+print(f"  b        = {b_sol:.6g}")
+print(f"  theta0   = {theta0:.6g} rad = {np.rad2deg(theta0):.2f}°")
+print(f"  a        = {a:.6g}")
+print(f"  L_check  = {L_check:.6g} m (Ziel {L_target} m)  |Δ|={abs(L_check-L_target):.3e}")
+print(f"  phi_taper= {np.rad2deg(phi_taper):.6f}°")
+print(f"  beta     = {beta:.6g}\n")
+
+# print("Segmentinformationen:")
+# print(f"mittlere Segmentlänge = {np.mean(seg_lengths):.6g} m")
+# print(f"min Segmentlänge      = {np.min(seg_lengths):.6g} m")
+# print(f"max Segmentlänge      = {np.max(seg_lengths):.6g} m")
+# print(f"mittlere Halbe Breite = {np.mean(seg_halfwidths):.6g} m")
+# print(f"min Halbe Breite      = {np.min(seg_halfwidths):.6g} m")
+# print(f"max Halbe Breite      = {np.max(seg_halfwidths):.6g} m\n")
+
+# print("Zwischenwerte (theta, s, Y, delta, w):")
+# print(f"{'theta(rad)':>10} | {'s(m)':>9} | {'Y(m)':>9} | {'delta(m)':>9} | {'w(m)':>9}")
+# for i in range(len(thetas)):
+#     print(f"{thetas[i]:10.6g} | {s_vals[i]:9.6g} | {Y_vals[i]:9.6g} | {delta_vals[i]:9.6g} | {w_vals[i]:9.6g}")
+# print("\nSegmentwerte (Seg | seg_len | half_width):")
+# print(f"{'Seg':>3} | {'seg_len(m)':>12} | {'half_width(m)':>14}")
+# for i in range(N):
+#     print(f"{i:3d} | {seg_lengths[i]:12.6g} | {seg_halfwidths[i]:14.6g}")
+# print("="*40)
 
 # ========================================
-# 2) MuJoCo-MJCF-Generator (Box-Kette)
+# MuJoCo-MJCF-Generator (Box-Kette)
 # ========================================
 def mjcf_header(model_name="spiral_chain"):
     return f'''<mujoco model="{model_name}">
@@ -143,20 +108,11 @@ def mjcf_footer():
 
 NUM_CABLES = 2
 
-# ---- feste Einstellungen für 2 Seile (±x) ----
 SITE_SIZE      = 0.001     # sichtbare Größe der Site-Kugeln
 
 def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
-    """
-    Erzeugt:
-      - body 'seg_i' (Pivot am Body-Ursprung, Joint um y)
-      - verkürzte sichtbare Box mit Lücke 'gap'
-      - 2x Sites pro Ende (in/out) für 2 Tendons (±x-Außenkante)
-      - child-attachment 'seg_i_end' am Segmentende (z=seg_len)
-    Kette entlang +z. Kinematik bleibt unverändert.
-    """
-    # sichtbare Halblänge so, dass zwischen Segmenten die Lücke = gap entsteht
-    half_vis_len = seg_len/2.0#max(seg_len/2.0 - gap/2.0, 1e-6)
+
+    half_vis_len = seg_len/2.0
 
     hole_size = 0.005
 
@@ -229,7 +185,6 @@ def tendons_xml(num_segments):
 
 def actuators_xml():
     lines = ['  <actuator>']
-    # Tipp: ctrlrange grob anpassen; hängt von deiner Kettenlänge/Lücke ab
     for k in range(NUM_CABLES):
         lines.append(
           f'    <position name="tendon_act_{k}" tendon="tendon_{k}" '
@@ -243,7 +198,6 @@ def sensors_xml():
     for k in range(NUM_CABLES):
         lines.append(f'    <tendonpos name="tendon{k}_pos" tendon="tendon_{k}"/>')
         lines.append(f'    <tendonvel name="tendon{k}_vel" tendon="tendon_{k}"/>')
-        #lines.append(f'    <tendonfrc name="tendon{k}_frc" tendon="tendon_{k}"/>')
     lines.append('  </sensor>\n')
     return "\n".join(lines)
 
@@ -274,22 +228,13 @@ def build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain"):
     for i in reversed(range(N)):
         xml.append(close_body_block())
 
-    
-
     xml.append(worldbody_footer())
-
-
     xml.append(tendons_xml(N))
     xml.append(actuators_xml())
     xml.append(sensors_xml())
-
     xml.append(mjcf_footer())
 
-
-
-    # Füge Keyframe vor </mujoco> ein:
     full = "".join(xml)
-    #full = full.replace('</mujoco>', keyframe + '</mujoco>')
     return full
 
 # =============================
