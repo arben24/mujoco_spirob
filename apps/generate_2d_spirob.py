@@ -114,8 +114,6 @@ def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
 
     half_vis_len = seg_len/2.0
 
-    hole_size = 0.005
-
     hx = float(half_width)
     hy = float(half_width)
     hz = float(half_vis_len)
@@ -218,7 +216,6 @@ def build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain"):
     N = len(seg_lengths)
 
     xml = [mjcf_header(model_name)]
-    indent = ""  # wir verwenden fixe Blocks mit Einrückungen oben
 
     for i in reversed(range(N)):
         add_color = (i % 2 == 0)

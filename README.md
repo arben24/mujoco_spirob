@@ -32,7 +32,7 @@ This will start the 2D generation script using the installed dependencies and en
 
 ## Running Tests
 
-Tests are located in the tests/ folder. You can run them using:
+Tests are located in the `tests/` folder. You can run them using:
 
 ```bash
 uv run pytest
@@ -46,7 +46,7 @@ Documentation is written using Sphinx. To build it:
 cd docs
 uv run make html
 ```
-The generated HTML files will be available in docs/build/html. There you can open the index.html with the browser of you choice. 
+The generated HTML files will be available in docs/build/html. There you can open the `index.html` with the browser of you choice. 
 
 ## Project Structure
 
