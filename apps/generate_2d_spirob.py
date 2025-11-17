@@ -3,6 +3,13 @@ from scipy.optimize import bisect
 from pathlib import Path
 import math_spirob.math_spirob as ms  # für Hilfsfunktionen
 
+# do you want automatic xml formating of the output file? (reqires Mujoco, removes all comments but formats nicely)
+auto_formating = True
+
+if auto_formating:
+    import mujoco as mj
+
+
 # ==========================
 # 1) Parameter & Mathematik
 # ==========================
@@ -238,6 +245,9 @@ def build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain"):
 # 3) XML erzeugen & abspeichern
 # =============================
 xml_string = build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain")
+if auto_formating:
+    spec = mj.MjSpec.from_string(xml_string)
+    xml_string = spec.to_xml()
 out_path = Path("spiral_chain.xml")
 out_path.write_text(xml_string, encoding="utf-8")
 

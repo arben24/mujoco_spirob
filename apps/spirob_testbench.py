@@ -1,0 +1,42 @@
+import mujoco as mj
+import mujoco.viewer as viewer
+import time
+
+# Modell aus XML-Datei laden
+#model = mujoco.MjModel.from_xml_path("spiral_chain.xml")
+
+spec = mj.MjSpec.from_file("spiral_chain.xml")
+
+#print(spec.to_xml())
+
+
+model = spec.compile()
+
+# Simulationsdaten erstellen
+data = mj.MjData(model)
+print("Modell und Simulationsdaten erfolgreich geladen.")
+print(data.geom_xpos)
+
+
+with mj.viewer.launch_passive(model, data) as viewer:
+  # Close the viewer automatically after 30 wall-seconds.
+  start = time.time()
+  while viewer.is_running() and time.time() - start < 30:
+    step_start = time.time()
+
+
+    data.ctrl[0] = 0.3  # Set a constant control input for demonstration
+    #print(data.actuator('tendon_act_0'))
+    #print(model.sensor('tendon0_pos'))   #.data
+    #print(data.sensor('tendon0_vel'))
+    mj.mj_step(model, data)
+
+
+
+    # Pick up changes to the physics state, apply perturbations, update options from GUI.
+    viewer.sync()
+
+    # Rudimentary time keeping, will drift relative to wall clock.
+    time_until_next_step = model.opt.timestep - (time.time() - step_start)
+    if time_until_next_step > 0:
+      time.sleep(time_until_next_step)
