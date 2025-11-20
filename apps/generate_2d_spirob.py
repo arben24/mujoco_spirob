@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import bisect
 from pathlib import Path
 import math_spirob.math_spirob as ms  # für Hilfsfunktionen
+import math_spirob.spirob_generator as sg  # für High-Level API
 
 # do you want automatic xml formating of the output file? (reqires Mujoco, removes all comments but formats nicely)
 auto_formating = True
@@ -14,7 +15,7 @@ if auto_formating:
 # 1) Parameter & Mathematik
 # ==========================
 L_target   = 0.30               # gewünschte Mittelachsenlänge [m]
-tip_d      = 0.01              # Spitzendurchmesser [m]
+tip_d      = 0.02              # Spitzendurchmesser [m]
 base_d     = 0.06              # Basisdurchmesser [m]
 Delta_theta = np.deg2rad(30)    # Diskretisierungsschritt (30°)
 
@@ -252,3 +253,21 @@ out_path = Path("spiral_chain.xml")
 out_path.write_text(xml_string, encoding="utf-8")
 
 print(f"\nMJCF exportiert nach: {out_path.resolve()}")
+
+
+# check for library usage
+#st = sg.generate_xml_string(L_target, base_d, tip_d, Delta_theta,"spiral_chain_sg.xml")
+out_path = Path("spiral_chain_example.xml")
+
+# Aufruf der Funktion
+saved_file = sg.generate_and_save_xml(
+    filepath=out_path,
+    L_target=L_target,
+    base_d=base_d,
+    tip_d=tip_d,
+    Delta_theta_deg=np.rad2deg(Delta_theta),
+    model_name="spiral_chain_example",
+    auto_format = True
+)
+
+#print(st)

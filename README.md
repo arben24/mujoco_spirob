@@ -58,7 +58,8 @@ mujoco_spirob/
 ├── src/
 │   └── math_spirob/
 │       ├── __init__.py
-│       └── math_spirob.py
+│       ├── math_spirob.py
+        └── spirob_generator.py
 ├── apps/
 │   ├── generate_2d_spirob.py
 │   └── controll_spirob_test.py
