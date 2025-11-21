@@ -1,5 +1,6 @@
 # --- Python generelles ---
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *.pyo
 *.so
@@ -22,6 +23,8 @@ dist/
 # --- Sphinx-Dokumentation ---
 docs/build/
 docs/_build/
+docs/_static/
+docs/_templates/
 docs/doctrees/
 
 # --- Testkram ---

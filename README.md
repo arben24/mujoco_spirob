@@ -50,6 +50,12 @@ The generated HTML files will be available in docs/build/html. There you can ope
 
 ## Project Structure
 
+You can generate the project structure yourself using `tree`.  
+Run the following command:
+
+```bash
+tree --gitignore
+```
 
 ```bash
 mujoco_spirob/
@@ -62,7 +68,8 @@ mujoco_spirob/
         └── spirob_generator.py
 ├── apps/
 │   ├── generate_2d_spirob.py
-│   └── controll_spirob_test.py
+│   ├── controll_spirob_test.py
+    └── spirob_mujoco_plot.py
 ├── tests/
 │   └── test_math_spirob.py
 └── docs/

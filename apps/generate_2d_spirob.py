@@ -15,7 +15,7 @@ if auto_formating:
 # 1) Parameter & Mathematik
 # ==========================
 L_target   = 0.30               # gewünschte Mittelachsenlänge [m]
-tip_d      = 0.02              # Spitzendurchmesser [m]
+tip_d      = 0.01              # Spitzendurchmesser [m]
 base_d     = 0.06              # Basisdurchmesser [m]
 Delta_theta = np.deg2rad(30)    # Diskretisierungsschritt (30°)
 
@@ -152,8 +152,24 @@ def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
 
     rgba = '0.6 0.75 0.95 0.3' if add_color else '0.2 0.7 0.2 0.3'
 
+    if i==N-1:
+        return f'''      <body name="seg_{i}" pos="0 0 0">
+
+        <!-- sichtbare, kollisionslose box-->
+        <geom name="g_{i}" type="box"
+              size="{hx:.6g} {hy:.6g} {hz:.6g}"
+              pos="0 0 {hz:.6g}"
+              rgba="{rgba}" contype="1" conaffinity="0" density="1100"/>
+
+        <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
+        <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
+        <site name="site_out_{i}_1" pos="{-x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
+'''
+
 #        <geom type="sphere" size="{r0}" rgba="0.9 0.0 0.0 0.2"/>  armature="0.00001"
-    return f'''      <body name="seg_{i}" pos="0 0 0">
+    return f'''      <body name="seg_{i}" pos="0 0 {seg_len * beta:.6g}">
         <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.05" damping="0.05" limited="true" range="{-np.rad2deg(new_Delta_theta)+0.1} {np.rad2deg(new_Delta_theta)-0.1}" solimplimit="0.9 0.95 0.001" solreflimit="0.01 0.5"/>
 
         <!-- sichtbare, kollisionslose box-->
@@ -167,14 +183,11 @@ def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
         <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
         <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
         <site name="site_out_{i}_1" pos="{-x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{SITE_SIZE}" rgba="1 1 0 1"/>
-
-        <!-- Attachment-Punkt für das nächste Segment am Segmentende: -->
-        <body name="seg_{i}_end" pos="0 0 {seg_len:.6g}">
 '''
 
 def close_body_block():
     # Schließt seg_i_end und seg_i
-    return '''        </body>
+    return '''
       </body>
 '''
 

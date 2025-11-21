@@ -287,7 +287,7 @@ class XMLBuilder:
     # ---------- Körpersegment ----------
 
 
-    def body_block(self, i, seg_len, half_width, add_color=False, gap=0.002):
+    def body_block(self, i, seg_len, half_width, add_color=False):
         """
         Generate the MJCF XML block for a single chain segment.
 
@@ -301,16 +301,14 @@ class XMLBuilder:
             Half-width (radius) of the segment.
         add_color : bool, optional
             Whether to use an alternating color scheme.
-        gap : float, optional
-            Visual spacing offset for tendon routing.
 
         Returns
         -------
         str
             XML snippet representing the segment.
         """
-        half_vis_len = seg_len / 2.0
-        hx, hy, hz = float(half_width), float(half_width), float(half_vis_len)
+        half_seg_len = seg_len / 2.0
+        hx, hy, hz = float(half_width), float(half_width), float(half_seg_len)
         
         a = -np.tan(np.pi/2 - (self.phi_taper/2))
         b = -1
@@ -329,7 +327,19 @@ class XMLBuilder:
 
         rgba = '0.6 0.75 0.95 0.3' if add_color else '0.2 0.7 0.2 0.3'
 
-        return f'''      <body name="seg_{i}" pos="0 0 0">
+        N = len(self.seg_lengths)
+
+        if i==N-1:
+            return f'''      <body name="seg_{i}" pos="0 0 0">
+            <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
+                  rgba="{rgba}" contype="1" conaffinity="0" density="1100"/>
+            <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+            <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+            <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+            <site name="site_out_{i}_1" pos="{-x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+'''
+
+        return f'''      <body name="seg_{i}" pos="0 0 {seg_len * self.beta:.6g}">
             <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.05" damping="0.05"
                    limited="true" range="{-np.rad2deg(self.Delta_theta)+0.1} {np.rad2deg(self.Delta_theta)-0.1}"
                    solimplimit="0.9 0.95 0.001" solreflimit="0.01 0.5"/>
@@ -339,7 +349,6 @@ class XMLBuilder:
             <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
             <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
             <site name="site_out_{i}_1" pos="{-x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
-            <body name="seg_{i}_end" pos="0 0 {seg_len:.6g}">
 '''
 
 
@@ -355,7 +364,7 @@ class XMLBuilder:
         str
             XML-Fragment, das die offenen ``<body>``-Tags schließt.
         """
-        return "        </body>\n      </body>\n"
+        return "        </body>\n"
 
     # ---------- Tendons / Actuators ----------
 
