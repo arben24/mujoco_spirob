@@ -268,11 +268,11 @@ class XMLBuilder:
   <option timestep="0.005" gravity="0 0 -9.81" impratio="10" iterations="50"/>
   <default>
     <joint damping="0.2" stiffness="0.01" limited="true" range="{-rng+5} {rng-5}" solimplimit="0.9 0.95 0.001" solreflimit="0.02 0.5" armature="0.01"/>
-    <geom contype="1" conaffinity="0"/>
+    <geom contype="1" conaffinity="1"/>
   </default>
   <worldbody>
     <body name="base" pos="0 0 0">
-      <geom type="plane" size="2 2 0.1" rgba="0 0 1 0.6" contype="2" conaffinity="1"/>
+      <geom type="plane" size="2 2 0.1" rgba="0 0 1 0.6" contype="1" conaffinity="1"/>
       <!-- Der eigentliche Ketten-Root wird hier als Kind erzeugt -->
 '''
 
@@ -332,7 +332,7 @@ class XMLBuilder:
         if i==N-1:
             return f'''      <body name="seg_{i}" pos="0 0 0">
             <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
-                  rgba="{rgba}" contype="1" conaffinity="0" density="1100"/>
+                  rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
             <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
             <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
             <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
@@ -344,7 +344,7 @@ class XMLBuilder:
                    limited="true" range="{-np.rad2deg(self.Delta_theta)+0.1} {np.rad2deg(self.Delta_theta)-0.1}"
                    solimplimit="0.9 0.95 0.001" solreflimit="0.01 0.5"/>
             <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
-                  rgba="{rgba}" contype="1" conaffinity="0" density="1100"/>
+                  rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
             <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
             <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
             <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
@@ -365,6 +365,28 @@ class XMLBuilder:
             XML-Fragment, das die offenen ``<body>``-Tags schließt.
         """
         return "        </body>\n"
+
+    # ---------- Contact Exclusions ----------
+
+    def exclude_contacts_xml(self, N):
+        """
+        Generate XML fragment to exclude self-collisions between two segments.
+
+        The first two segments are considered static relative to the plane, so the collision
+        detection should ignore collisions between `seg_{N-1}` and `seg_{N-2}`.
+
+        Args:
+            N (int): Index of the last segment (e.g., number of segments minus 1).
+
+        Returns:
+            str: An XML string containing a `<contact>` element that excludes collision
+            between `seg_{N-1}` and `seg_{N-2}`.
+        """
+        return f'''  <contact>
+            <exclude body1="seg_{N - 1}" body2="seg_{N - 2}"/>
+            </contact> 
+            '''
+
 
     # ---------- Tendons / Actuators ----------
 
@@ -476,6 +498,7 @@ class XMLBuilder:
             xml.append(self.close_body_block())
 
         xml.append(self.worldbody_footer())
+        xml.append(self.exclude_contacts_xml(N))
         xml.append(self.tendons_xml(N))
         xml.append(self.actuators_xml())
         xml.append(self.sensors_xml())

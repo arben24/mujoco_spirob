@@ -101,7 +101,7 @@ def mjcf_header(model_name="spiral_chain"):
   </default>
   <worldbody>
     <body name="base" pos="0 0 0">
-      <geom type="plane" size="2 2 0.1" rgba="0 0 1 0.6" contype="2" conaffinity="1"/>
+      <geom type="plane" size="2 2 0.1" rgba="0 0 1 0.6" contype="1" conaffinity="1"/>
       <!-- Der eigentliche Ketten-Root wird hier als Kind erzeugt -->
 '''
 def worldbody_footer():
@@ -159,7 +159,7 @@ def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
         <geom name="g_{i}" type="box"
               size="{hx:.6g} {hy:.6g} {hz:.6g}"
               pos="0 0 {hz:.6g}"
-              rgba="{rgba}" contype="1" conaffinity="0" density="1100"/>
+              rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
 
         <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
         <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
@@ -176,7 +176,7 @@ def body_block(i, seg_len, half_width, add_color=False, gap=0.002):
         <geom name="g_{i}" type="box"
               size="{hx:.6g} {hy:.6g} {hz:.6g}"
               pos="0 0 {hz:.6g}"
-              rgba="{rgba}" contype="1" conaffinity="0" density="1100"/>
+              rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
 
         <!-- Tendon-Sites: unten (in) / oben (out) auf äußerster Kante ±x -->
         <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}"  size="{SITE_SIZE}" rgba="1 1 0 1"/>
@@ -220,6 +220,12 @@ def sensors_xml():
     lines.append('  </sensor>\n')
     return "\n".join(lines)
 
+# Ausschluss von Selbstkollisionen der ersten beiden Segmente.Grund dafür ist da szwischen plane und dem ersten Segment es als statisch betrachtet wird und daher kolisionsdetektion vom vorletzten zum letzten Segment statt findet.
+def exclude_contacts_xml(Na):
+    return f'''  <contact>
+    <exclude body1="seg_{N - 1}" body2="seg_{N - 2}"/>
+    </contact> 
+    '''
 
 
 def build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain"):
@@ -247,6 +253,7 @@ def build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain"):
         xml.append(close_body_block())
 
     xml.append(worldbody_footer())
+    xml.append(exclude_contacts_xml(N))
     xml.append(tendons_xml(N))
     xml.append(actuators_xml())
     xml.append(sensors_xml())

@@ -18,6 +18,7 @@ All project dependencies are managed with **[uv](https://github.com/astral-sh/uv
 From the project root directory, run:
 
 ```bash
+uv venv
 uv pip install -e .
 ```
 
