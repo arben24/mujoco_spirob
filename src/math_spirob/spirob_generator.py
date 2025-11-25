@@ -55,6 +55,13 @@ def generate_xml_string(
 
     geometry = calc.compute_geometry()
 
+    SensorRegistry.register("acc", "accelerometer")
+    SensorRegistry.register("gyro", "gyro")
+    SensorRegistry.register("angle", "jointpos")
+    SensorRegistry.register("tendon_frc", "tendonactuatorfrc")
+    SensorRegistry.register("tendon_pos", "tendonpos")
+    SensorRegistry.register("tendon_vel", "tendonvel")
+
     xml = XMLBuilder(
         geometry.seg_lengths,
         geometry.seg_halfwidths,
@@ -214,6 +221,28 @@ class SpiralCalculator:
         )
 
 
+class SensorRegistry:
+    _registry: dict[str, str] = {}
+
+    @classmethod
+    def register(cls, key: str, tag: str):
+        cls._registry[key] = tag
+
+    @classmethod
+    def get_xml_tag(cls, key: str) -> str:
+        if key not in cls._registry:
+            raise ValueError(f"Unknown sensor key: {key}")
+        return cls._registry[key]
+    
+    @classmethod
+    def exists(cls, key: str) -> bool:
+        return key in cls._registry
+
+    @classmethod
+    def allowed(cls):
+        return list(cls._registry.keys())
+
+
 # ===================================================================
 # 3) XML-Erzeuger (vormals body_block, tendons_xml, ...)
 # ===================================================================
@@ -330,9 +359,35 @@ class XMLBuilder:
         N = len(self.seg_lengths)
 
         if i==N-1:
+            if SensorRegistry.exists("acc") or SensorRegistry.exists("gyro"):
+                return f'''      <body name="seg_{i}" pos="0 0 {seg_len * self.beta:.6g}">
+                <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.05" damping="0.05"
+                    limited="true" range="{-np.rad2deg(self.Delta_theta)+0.1} {np.rad2deg(self.Delta_theta)-0.1}"
+                    solimplimit="0.9 0.95 0.001" solreflimit="0.01 0.5"/>
+                <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
+                    rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
+                <site name="site_imu_{i}"  pos="0 0 {hz:.6g}" size="{self.SITE_SIZE}" rgba="1 0 1 1"/>
+                <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+                <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+                <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+                <site name="site_out_{i}_1" pos="{-x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+'''
             return f'''      <body name="seg_{i}" pos="0 0 0">
             <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
                   rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
+            <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+            <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+            <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+            <site name="site_out_{i}_1" pos="{-x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
+'''
+        if SensorRegistry.exists("acc") or SensorRegistry.exists("gyro"):
+            return f'''      <body name="seg_{i}" pos="0 0 {seg_len * self.beta:.6g}">
+            <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.05" damping="0.05"
+                   limited="true" range="{-np.rad2deg(self.Delta_theta)+0.1} {np.rad2deg(self.Delta_theta)-0.1}"
+                   solimplimit="0.9 0.95 0.001" solreflimit="0.01 0.5"/>
+            <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
+                  rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
+            <site name="site_imu_{i}"  pos="0 0 {hz:.6g}" size="{self.SITE_SIZE}" rgba="1 0 1 1"/>
             <site name="site_in_{i}_0"  pos="{x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
             <site name="site_out_{i}_0" pos="{x_out:.6g} {y_out:.6g} {z_out:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
             <site name="site_in_{i}_1"  pos="{-x_in:.6g} {y_in:.6g} {z_in:.6g}" size="{self.SITE_SIZE}" rgba="1 1 0 1"/>
@@ -451,10 +506,23 @@ class XMLBuilder:
         str
             XML-Block mit allen Sensor-Definitionen.
         """
+        N = len(self.seg_lengths)
         out = ["  <sensor>"]
         for k in range(self.NUM_CABLES):
-            out.append(f'    <tendonpos name="tendon{k}_pos" tendon="tendon_{k}"/>')
-            out.append(f'    <tendonvel name="tendon{k}_vel" tendon="tendon_{k}"/>')
+            if SensorRegistry.exists("tendon_frc"):
+                out.append(f'<{SensorRegistry.get_xml_tag("tendon_frc")} name="tendon{k}_frc" tendon="tendon_{k}"/>')
+            if SensorRegistry.exists("tendon_pos"):
+                out.append(f'<{SensorRegistry.get_xml_tag("tendon_pos")} name="tendon{k}_pos" tendon="tendon_{k}"/>')
+            if SensorRegistry.exists("tendon_vel"):
+                out.append(f'<{SensorRegistry.get_xml_tag("tendon_vel")} name="tendon{k}_vel" tendon="tendon_{k}"/>')
+        
+        for i in range(N):
+            if SensorRegistry.exists("angle"):
+                out.append(f'<{SensorRegistry.get_xml_tag("angle")} name="jointpos_{i}" joint="j_{i}"/>')
+            if SensorRegistry.exists("gyro"):
+                out.append(f'<{SensorRegistry.get_xml_tag("gyro")} name="gyro_{i}" site="site_imu_{i}"/>')
+            if SensorRegistry.exists("acc"):
+                out.append(f'<{SensorRegistry.get_xml_tag("acc")} name="acc_{i}" site="site_imu_{i}"/>')
         out.append("  </sensor>\n")
         return "\n".join(out)
 

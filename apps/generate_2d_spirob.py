@@ -212,16 +212,70 @@ def actuators_xml():
     lines.append('  </actuator>\n')
     return "\n".join(lines)
 
-def sensors_xml():
+# def sensors_xml():
+#     lines = ['  <sensor>']
+#     for k in range(NUM_CABLES):
+#         lines.append(f'    <tendonpos name="tendon{k}_pos" tendon="tendon_{k}"/>')
+#         lines.append(f'    <tendonvel name="tendon{k}_vel" tendon="tendon_{k}"/>')
+#         lines.append(f'    <tendonactuatorfrc name="tendon{k}_frc" tendon="tendon_{k}"/>')
+#     lines.append('  </sensor>\n')
+#     return "\n".join(lines)
+
+def sensors_xml(num_cables: int, sensors: dict | None = None) -> str:
+    """Generate an XML fragment defining tendon-related sensors.
+
+    This function creates MuJoCo `<sensor>` entries for each tendon cable.
+    For each cable, it generates one XML tag per sensor type (e.g. position,
+    velocity, force). The tags and their MuJoCo XML equivalents can be
+    customized via the `sensors` dictionary.
+
+    Args:
+        num_cables (int):  
+            Number of tendon cables for which to generate sensors.
+        sensors (dict | None):  
+            Optional mapping from sensor keys (e.g. ``"pos"``) to
+            MuJoCo XML tags (e.g. ``"tendonpos"``).  
+            If ``None``, the following default mapping is used::
+
+                {
+                    "pos": "tendonpos",
+                    "vel": "tendonvel",
+                    "frc": "tendonactuatorfrc",
+                }
+
+    Returns:
+        str:  
+            A formatted XML string containing all generated sensor tags wrapped
+            inside a single ``<sensor>`` block.
+
+    Example:
+        >>> print(sensors_xml(2))
+        <sensor>
+            <tendonpos name="tendon0_pos" tendon="tendon_0"/>
+            <tendonvel name="tendon0_vel" tendon="tendon_0"/>
+            <tendonactuatorfrc name="tendon0_frc" tendon="tendon_0"/>
+            ...
+        </sensor>
+    """
+    if sensors is None:
+        sensors = {
+            "pos": "tendonpos",
+            "vel": "tendonvel",
+            "frc": "tendonactuatorfrc",
+        }
+
     lines = ['  <sensor>']
-    for k in range(NUM_CABLES):
-        lines.append(f'    <tendonpos name="tendon{k}_pos" tendon="tendon_{k}"/>')
-        lines.append(f'    <tendonvel name="tendon{k}_vel" tendon="tendon_{k}"/>')
-    lines.append('  </sensor>\n')
+    for k in range(num_cables):
+        for key, xml_tag in sensors.items():
+            lines.append(
+                f'    <{xml_tag} name="tendon{k}_{key}" tendon="tendon_{k}"/>'
+            )
+    lines.append('  </sensor>')
     return "\n".join(lines)
 
+
 # Ausschluss von Selbstkollisionen der ersten beiden Segmente.Grund dafür ist da szwischen plane und dem ersten Segment es als statisch betrachtet wird und daher kolisionsdetektion vom vorletzten zum letzten Segment statt findet.
-def exclude_contacts_xml(Na):
+def exclude_contacts_xml():
     return f'''  <contact>
     <exclude body1="seg_{N - 1}" body2="seg_{N - 2}"/>
     </contact> 
@@ -253,10 +307,10 @@ def build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain"):
         xml.append(close_body_block())
 
     xml.append(worldbody_footer())
-    xml.append(exclude_contacts_xml(N))
+    xml.append(exclude_contacts_xml())
     xml.append(tendons_xml(N))
     xml.append(actuators_xml())
-    xml.append(sensors_xml())
+    xml.append(sensors_xml(2))
     xml.append(mjcf_footer())
 
     full = "".join(xml)
@@ -265,19 +319,19 @@ def build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain"):
 # =============================
 # 3) XML erzeugen & abspeichern
 # =============================
-xml_string = build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain")
-if auto_formating:
-    spec = mj.MjSpec.from_string(xml_string)
-    xml_string = spec.to_xml()
-out_path = Path("spiral_chain.xml")
-out_path.write_text(xml_string, encoding="utf-8")
+# xml_string = build_chain_xml(seg_lengths, seg_halfwidths, model_name="spiral_chain")
+# if auto_formating:
+#     spec = mj.MjSpec.from_string(xml_string)
+#     xml_string = spec.to_xml()
+# out_path = Path("spiral_chain.xml")
+# out_path.write_text(xml_string, encoding="utf-8")
 
-print(f"\nMJCF exportiert nach: {out_path.resolve()}")
+# print(f"\nMJCF exportiert nach: {out_path.resolve()}")
 
 
 # check for library usage
 #st = sg.generate_xml_string(L_target, base_d, tip_d, Delta_theta,"spiral_chain_sg.xml")
-out_path = Path("spiral_chain_example.xml")
+out_path = Path("spiral_chain.xml")
 
 # Aufruf der Funktion
 saved_file = sg.generate_and_save_xml(
