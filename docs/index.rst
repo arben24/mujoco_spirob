@@ -10,4 +10,5 @@ Mujoco_Spirob documentation
    :hidden:
    :caption: Contents:
 
-   spirob_docs/api
+   spirob_docs/math_spirob
+   spirob_docs/spirob_generator

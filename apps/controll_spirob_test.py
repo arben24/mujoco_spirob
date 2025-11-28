@@ -18,10 +18,12 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     step_start = time.time()
 
 
-    data.ctrl[0] = 0.3  # Set a constant control input for demonstration
-    print(data.actuator('tendon_act_0'))
+    #data.ctrl[0] = 0.3  # Set a constant control input for demonstration
+    #print(data.actuator('tendon_act_0'))
     #print(model.sensor('tendon0_pos'))   #.data
-    print(data.sensor('tendon0_vel'))
+    #print(data.sensor('tendon0_vel'))
+    #print(data.sensor('tendon1_frc'))
+    print(data.sensor('gyro_0'))
     mujoco.mj_step(model, data)
 
 

@@ -18,6 +18,7 @@ All project dependencies are managed with **[uv](https://github.com/astral-sh/uv
 From the project root directory, run:
 
 ```bash
+uv venv
 uv pip install -e .
 ```
 
@@ -50,6 +51,12 @@ The generated HTML files will be available in docs/build/html. There you can ope
 
 ## Project Structure
 
+You can generate the project structure yourself using `tree`.  
+Run the following command:
+
+```bash
+tree --gitignore
+```
 
 ```bash
 mujoco_spirob/
@@ -58,10 +65,12 @@ mujoco_spirob/
 ├── src/
 │   └── math_spirob/
 │       ├── __init__.py
-│       └── math_spirob.py
+│       ├── math_spirob.py
+        └── spirob_generator.py
 ├── apps/
 │   ├── generate_2d_spirob.py
-│   └── controll_spirob_test.py
+│   ├── controll_spirob_test.py
+    └── spirob_mujoco_plot.py
 ├── tests/
 │   └── test_math_spirob.py
 └── docs/
