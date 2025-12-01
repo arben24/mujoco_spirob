@@ -270,7 +270,6 @@ def plot_sensors_grouped(sensor_np_dict, sensor_prefix, title):
 
         axs[-1].set_xlabel("Samples")
         plt.tight_layout()
-        plt.show()
 
     elif is_scalar_sensor:
         # ======== 1D Sensor (tendon_frc, joint_vel, ...) ============
