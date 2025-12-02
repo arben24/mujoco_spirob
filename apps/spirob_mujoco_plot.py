@@ -337,14 +337,14 @@ def create_single_polars_dataframe(
             
             if D == 3:
                 # Vektor-Sensor (3D): Benennung: group_sensorname_Achse (z.B. acc_torso_X)
-                columns_prefix = f"{group_prefix}_{name}"
+                columns_prefix = name
                 all_columns.append(pl.Series(f"{columns_prefix}_X", values_array[:, 0]))
                 all_columns.append(pl.Series(f"{columns_prefix}_Y", values_array[:, 1]))
                 all_columns.append(pl.Series(f"{columns_prefix}_Z", values_array[:, 2]))
             
             elif D == 1:
                 # Skalar-Sensor (1D): Benennung: group_sensorname (z.B. tendon_frc_seil1)
-                column_name = f"{group_prefix}_{name}"
+                column_name = name
                 all_columns.append(pl.Series(column_name, values_array.squeeze()))
                 
     # 3. DataFrame aus allen gesammelten Polars Series erstellen
@@ -354,15 +354,6 @@ if not USE_VIEWER: # Dies stellt sicher, dass es nach der Batch-Simulation läuf
     
     # WICHTIG: Verwenden Sie hier das globale time_array aus dem effizienten Code
     time_series_data = time_array[:step_index+1] # Nutzen Sie nur die tatsächlich geschriebenen Samples
-    
-    
-    # --- Polars Beispiel ---
-    # Optional: Erstellung eines Polars DataFrames für z.B. Accelerometer
-    # if PLOT_ACC_DATA and acc_over_time:
-    #     acc_df = numpy_dict_to_polars_df(acc_over_time, time_series_data)
-    #     print("\n--- Polars DataFrame Beispiel (ACC) ---")
-    #     print(acc_df.head(3))
-    #     # Sie könnten hier Filtern oder Aggregieren, bevor Sie plotten.
 
     
     # Definiere alle Sensor-Dictionaries, die du konvertieren möchtest

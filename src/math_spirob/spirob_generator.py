@@ -361,9 +361,6 @@ class XMLBuilder:
         if i==N-1:
             if SensorRegistry.exists("acc") or SensorRegistry.exists("gyro"):
                 return f'''      <body name="seg_{i}" pos="0 0 {seg_len * self.beta:.6g}">
-                <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.05" damping="0.05"
-                    limited="true" range="{-np.rad2deg(self.Delta_theta)+0.1} {np.rad2deg(self.Delta_theta)-0.1}"
-                    solimplimit="0.9 0.95 0.001" solreflimit="0.01 0.5"/>
                 <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
                     rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
                 <site name="site_imu_{i}"  pos="0 0 {hz:.6g}" size="{self.SITE_SIZE}" rgba="1 0 1 1"/>
@@ -515,10 +512,10 @@ class XMLBuilder:
                 out.append(f'<{SensorRegistry.get_xml_tag("tendon_pos")} name="tendon{k}_pos" tendon="tendon_{k}"/>')
             if SensorRegistry.exists("tendon_vel"):
                 out.append(f'<{SensorRegistry.get_xml_tag("tendon_vel")} name="tendon{k}_vel" tendon="tendon_{k}"/>')
-        
-        for i in range(N):
+        for i in range(N-1):
             if SensorRegistry.exists("angle"):
                 out.append(f'<{SensorRegistry.get_xml_tag("angle")} name="jointpos_{i}" joint="j_{i}"/>')
+        for i in range(N):
             if SensorRegistry.exists("gyro"):
                 out.append(f'<{SensorRegistry.get_xml_tag("gyro")} name="gyro_{i}" site="site_imu_{i}"/>')
             if SensorRegistry.exists("acc"):
