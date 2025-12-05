@@ -3,7 +3,7 @@ from pathlib import Path
 import math_spirob.spirob_generator as sg  # für High-Level API
 
 # do you want automatic xml formating of the output file? (reqires Mujoco, removes all comments but formats nicely)
-auto_formating = True
+auto_formating = False
 L_target   = 0.30               # gewünschte Mittelachsenlänge [m]
 tip_d      = 0.01              # Spitzendurchmesser [m]
 base_d     = 0.06              # Basisdurchmesser [m]
@@ -22,7 +22,7 @@ saved_file = sg.generate_and_save_xml(
     tip_d=tip_d,
     Delta_theta_deg=np.rad2deg(Delta_theta),
     model_name="spiral_chain_example",
-    auto_format = True
+    auto_format = auto_formating
 )
 
 #print(st)

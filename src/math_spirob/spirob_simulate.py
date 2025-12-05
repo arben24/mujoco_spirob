@@ -263,7 +263,8 @@ def generate_grid_configs(variable_params: Dict[str, Any], fixed_params: Dict[st
         id_parts = [
             ctrl_name,
             f"L{config['L_target']:.2f}",
-            f"T{config['sim_time']:.1f}"
+            f"T{config['sim_time']:.1f}",
+            f"d{config['base_d']:.3f}",
             # ... füge weitere wichtige Parameter hinzu
         ]
         config["id"] = f"Run_{run_counter:03d}_{'_'.join(id_parts)}"
@@ -274,7 +275,7 @@ def generate_grid_configs(variable_params: Dict[str, Any], fixed_params: Dict[st
     return SIM_CONFIGS
 
 
-def print_configs_formatted(config_list: List[Dict[str, Any]]):
+def print_configs_formatted(config_list: List[Dict[str, Any]], preview_limit: int = 5,print_all: bool = False):
     """
     Gibt eine formatierte Vorschau der Konfigurationsliste auf der Konsole aus.
     """
@@ -283,8 +284,8 @@ def print_configs_formatted(config_list: List[Dict[str, Any]]):
     print(f"📄 VORSCHAU DER KONFIGURATIONEN ({len(config_list)} Läufe) 📄")
     print("="*50)
 
-    # Geben Sie die Konfiguration der ersten 5 Läufe übersichtlich aus
-    preview_limit = 5
+    if print_all:
+        preview_limit = len(config_list)
     
     for i, config in enumerate(config_list):
         if i >= preview_limit:
@@ -298,6 +299,7 @@ def print_configs_formatted(config_list: List[Dict[str, Any]]):
         # Gib die wichtigsten Parameter aus
         print(f"[{i+1}/{len(config_list)}] ID: {config['id']}")
         print(f"  L_target: {config['L_target']:.2f}, Time: {config['sim_time']:.1f}")
+        print(f"  base_d: {config['base_d']:.3f}, tip_d: {config['tip_d']:.3f}, Delta_theta_deg: {config['Delta_theta_deg']}")
         print(f"  Controller: {ctrl_name}")
         
     print("\n" + "="*50)
