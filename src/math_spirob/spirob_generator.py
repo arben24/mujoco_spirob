@@ -61,7 +61,7 @@ def generate_xml_string(
     SensorRegistry.register("tendon_frc", "tendonactuatorfrc")
     SensorRegistry.register("tendon_pos", "tendonpos")
     SensorRegistry.register("tendon_vel", "tendonvel")
-    SensorRegistry.register("frc", "force")
+    #SensorRegistry.register("frc", "force")    # DO NOT WORK THIS WAY YET
 
     xml = XMLBuilder(
         geometry.seg_lengths,

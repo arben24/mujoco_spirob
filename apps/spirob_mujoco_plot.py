@@ -5,410 +5,344 @@ import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 import math_spirob.spirob_generator as sg
-from typing import Dict, Any, List,Tuple
+from typing import Dict, Any, List, Tuple, Optional
+from dataclasses import dataclass, field
+from enum import Enum, auto
 
 # ---------------------------------------------------------
-# CONFIG FLAGS
+# 1. KONFIGURATION & KONSTANTEN
 # ---------------------------------------------------------
-USE_VIEWER = False          # False = keine Visualisierung, True = mit Visualisierung
-REALTIME = False            # False = Simulation schnellstmöglich, True = Echtzeit-Simulation
-VIEWER_PASSIVE = True      # True = launch_passive, False = launch
-SIM_TIME = 2.0             # Sekunden Simulation
+USE_VIEWER = False          
+REALTIME = False            
+VIEWER_PASSIVE = True      
+SIM_TIME = 2.0             
+
+# Welche Daten sollen geplottet werden?
+PLOT_CONFIG = {
+    "ACC": True,
+    "GYRO": True,
+    "TENDON_FRC": True,
+    "JOINT_POS": True,
+    "FORCE_LOCAL": True, # Kontaktkräfte
+    "GEOM_POS": True    # Geometrie-Positionen (meist uninteressant zu plotten)
+}
+
 # ---------------------------------------------------------
-PLOT_ACC_DATA = True        # Ob Beschleunigungsdaten geplottet werden sollen 
-PLOT_GYRO_DATA = True       # Ob Gyroskopdaten geplottet werden sollen
-PLOT_TENDONFRC_DATA = True  # Ob Seilkraftdaten geplottet werden sollen
-PLOT_TENDONPOS_DATA = True  # Ob Seilpositionsdaten geplottet werden sollen
-PLOT_TENDOONVEL_DATA = True  # Ob Seilgeschwindigkeitsdaten geplottet werden sollen
-PLOT_JOINTPOS_DATA = True    # Ob Gelenkpositionsdaten geplottet werden sollen
-PLOT_JOINTVEL_DATA = True    # Ob Gelenkgeschwindigkeitsdaten geplottet werden sollen
+# 2. DATENSTRUKTUREN (CLEAN CODE SETUP)
+# ---------------------------------------------------------
+
+class DataGroup(Enum):
+    """Definiert Kategorien für Zeitreihen-Daten."""
+    ACC = "acc"
+    GYRO = "gyro"
+    TENDON_FRC = "tendon_frc"
+    TENDON_POS = "tendon_pos"
+    TENDON_VEL = "tendon_vel"
+    JOINT_POS = "joint_pos"
+    JOINT_VEL = "joint_vel"
+    # Eigene berechnete Gruppen
+    GEOM_POS = "geom_pos"
+    FORCE_LOCAL = "force_local"
+    MOMENT_LOCAL = "moment_local"
+
+# Mapping von MuJoCo Sensor-Typen zu unseren Gruppen
+SENSOR_MAPPING = {
+    mj.mjtSensor.mjSENS_ACCELEROMETER:    DataGroup.ACC,
+    mj.mjtSensor.mjSENS_GYRO:             DataGroup.GYRO,
+    mj.mjtSensor.mjSENS_TENDONACTFRC:     DataGroup.TENDON_FRC,
+    mj.mjtSensor.mjSENS_TENDONPOS:        DataGroup.TENDON_POS,
+    mj.mjtSensor.mjSENS_TENDONVEL:        DataGroup.TENDON_VEL,
+    mj.mjtSensor.mjSENS_JOINTPOS:         DataGroup.JOINT_POS,
+    mj.mjtSensor.mjSENS_JOINTVEL:         DataGroup.JOINT_VEL,
+}
+
+@dataclass
+class TimeData:
+    """
+    Repräsentiert eine einzelne Zeitreihe (z.B. ein Sensor oder ein Geom-Wert).
+    Hält Metadaten und das Speicher-Array zusammen.
+    """
+    name: str                       # Name (z.B. 'sensor_A' oder 'g_0')
+    group: DataGroup                # Zu welcher Gruppe gehört das (z.B. ACC)
+    array: np.ndarray               # Das Speicher-Array (Nx1 oder Nx3)
+    mujoco_id: int = -1             # ID in MuJoCo (Sensor-ID oder Geom-ID)
+    dim: int = 1                    # Dimension (1 oder 3)
+
+# ---------------------------------------------------------
+# 3. HILFSFUNKTIONEN
+# ---------------------------------------------------------
+
+def get_geom_contact_forces(
+    model: mj.MjModel, 
+    data: mj.MjData, 
+    target_geom_ids: Dict[int, str]
+) -> Dict[str, Dict[str, np.ndarray]]:
+    """
+    Berechnet summierte Kontaktkräfte und Momente pro Geom.
+    Args:
+        target_geom_ids: Dictionary {geom_id: geom_name} der zu überwachenden Geoms.
+    """
+    results = {}
+    
+    # Puffer für MuJoCo Funktion
+    c_force_vector = np.zeros(6, dtype=np.float64)
+
+    for i in range(data.ncon):
+        contact = data.contact[i]
+        
+        # Prüfen, ob eines der beteiligten Geoms für uns interessant ist
+        geom_id = -1
+        if contact.geom1 in target_geom_ids:
+            geom_id = contact.geom1
+        elif contact.geom2 in target_geom_ids:
+            geom_id = contact.geom2
+            
+        if geom_id != -1:
+            # Kraft im Kontakt-Frame berechnen
+            mj.mj_contactForce(model, data, i, c_force_vector)
+            
+            # [Fx, Fy, Fz, Tx, Ty, Tz]
+            force = c_force_vector[0:3]
+            moment = c_force_vector[3:6]
+            
+            name = target_geom_ids[geom_id]
+            
+            if name not in results:
+                results[name] = {
+                    'force': np.zeros(3, dtype=np.float64), 
+                    'moment': np.zeros(3, dtype=np.float64)
+                }
+            
+            results[name]['force'] += force
+            results[name]['moment'] += moment
+
+    return results
+
+# ---------------------------------------------------------
+# 4. MODELL ERSTELLUNG
 # ---------------------------------------------------------
 
 xml_string = sg.generate_xml_string(
-    L_target=0.30,
-    base_d=0.06,
-    tip_d=0.01,
-    Delta_theta_deg=30,
-    model_name="spiral_chain_plot",
-    auto_format=True
+    L_target=0.30, base_d=0.06, tip_d=0.01, Delta_theta_deg=30,
+    model_name="spiral_chain_plot", auto_format=True
 )
+print("XML generiert.")
 
-print("XML string generated.")
-
-# Modell laden
-#spec = mj.MjSpec.from_file("spiral_chain.xml")
 spec = mj.MjSpec.from_string(xml_string)
-
-# Function that recursively prints all body names
-def print_bodies(parent, level=0):
-  body = parent.first_body()
-  while body:
-    print(''.join(['-' for i in range(level)]) + body.name)
-    print_bodies(body, level + 1)
-    body = parent.next_body(body)
-
-print("The spec has the following actuators:")
-for actuator in spec.actuators:
-  print(actuator.name)
-
-print("\nThe spec has the following bodies:")
-print_bodies(spec.worldbody)
-
 model = spec.compile()
-
-# Simulationsdaten erstellen
 data = mj.MjData(model)
 
 # ---------------------------------------------------------
-
-
-positions_over_time = {}
-acc_over_time = {}
-gyro_over_time = {}
-tendon_frc_over_time = {}
-tendon_pos_over_time = {}
-tendon_vel_over_time = {}
-joint_pos_over_time = {}
-joint_vel_over_time = {}
-
-
-SENSOR_CONFIG = {
-    mj.mjtSensor.mjSENS_ACCELEROMETER:    ('acc',    'acc_over_time'),
-    mj.mjtSensor.mjSENS_GYRO:             ('gyro',   'gyro_over_time'),
-    mj.mjtSensor.mjSENS_TENDONACTFRC:     ('tendon_frc', 'tendon_frc_over_time'),
-    mj.mjtSensor.mjSENS_TENDONPOS:        ('tendon_pos', 'tendon_pos_over_time'),
-    mj.mjtSensor.mjSENS_TENDONVEL:        ('tendon_vel', 'tendon_vel_over_time'),
-    mj.mjtSensor.mjSENS_JOINTPOS:         ('joint_pos',  'joint_pos_over_time'),
-    mj.mjtSensor.mjSENS_JOINTVEL:         ('joint_vel',  'joint_vel_over_time'),
-}
-
-sensor_metadata = []
+# 5. INITIALISIERUNG & SPEICHER-ALLOKATION
+# ---------------------------------------------------------
 
 num_steps = int(SIM_TIME / model.opt.timestep) + 1
+print(f"Allokiere Speicher für {num_steps} Schritte...")
 
-num_sensors = model.nsensor
-print(f"Anzahl der Sensoren im Modell: {num_sensors}")
+# Zentrale Liste für ALLE Zeitreihen (Sensoren + Geoms)
+all_metadata: List[TimeData] = []
+# Hilfs-Map für schnellen Zugriff auf Geom-Namen via ID (für Kontaktberechnung)
+geom_id_to_name_map: Dict[int, str] = {}
 
-
-for i in range(num_sensors):
-    sensor_type = model.sensor_type[i]
-    
-    if sensor_type in SENSOR_CONFIG:
+# A) Sensoren initialisieren
+for i in range(model.nsensor):
+    stype = model.sensor_type[i]
+    if stype in SENSOR_MAPPING:
+        group = SENSOR_MAPPING[stype]
         name = mj.mj_id2name(model, mj.mjtObj.mjOBJ_SENSOR, i)
-        key_name, dict_name = SENSOR_CONFIG[sensor_type]
+        dim = model.sensor_dim[i]
         
-        # HIER IST DIE KORREKTUR: Abrufen der Dimension (1D oder 3D)
-        dim = model.sensor_dim[i] 
-        
-        # Erstelle ein N x D Array
-        # D ist 3 für Acc/Gyro und 1 für die anderen
-        time_series_array = np.zeros((num_steps, dim), dtype=np.float64)
-        
-        # Speichere den Array im globalen Dictionary
-        globals()[dict_name][name] = time_series_array 
-        
-        # Speichere die Metadaten für den Simulations-Loop
-        sensor_metadata.append({
-            'name': name,
-            'array': time_series_array, 
-            'index': i                  
-        })
+        all_metadata.append(TimeData(
+            name=name, group=group, mujoco_id=i, dim=dim,
+            array=np.zeros((num_steps, dim), dtype=np.float64)
+        ))
 
-print(f"Speicher für {len(sensor_metadata)} Sensor-Zeitreihen vorab zugewiesen.")
-# print("Sensor-Metadaten:")
-# for meta in sensor_metadata:
-#     print(f"  Sensor Name: {meta['name']}, Array Shape: {meta['array'].shape}, Index: {meta['index']}")
-
-
-# --- GEOM-POSITIONEN ---
-geom_metadata = []
+# B) Geoms initialisieren (Position, Kraft, Moment)
 i = 0
 while True:
     name = f"g_{i}"
-    geom_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_GEOM, name)
-    if geom_id == -1:
-        break
+    gid = mj.mj_name2id(model, mj.mjtObj.mjOBJ_GEOM, name)
+    if gid == -1: break
     
-    # Position hat immer 3 Dimensionen
-    pos_array = np.zeros((num_steps, 3), dtype=np.float64)
-    positions_over_time[name] = pos_array
+    geom_id_to_name_map[gid] = name
     
-    geom_metadata.append({
-        'name': name,
-        'array': pos_array,
-        'id': geom_id
-    })
+    # 1. Position
+    all_metadata.append(TimeData(
+        name=name, group=DataGroup.GEOM_POS, mujoco_id=gid, dim=3,
+        array=np.zeros((num_steps, 3), dtype=np.float64)
+    ))
+    # 2. Lokale Kraft
+    all_metadata.append(TimeData(
+        name=name, group=DataGroup.FORCE_LOCAL, mujoco_id=gid, dim=3,
+        array=np.zeros((num_steps, 3), dtype=np.float64)
+    ))
+    # 3. Lokales Moment
+    all_metadata.append(TimeData(
+        name=name, group=DataGroup.MOMENT_LOCAL, mujoco_id=gid, dim=3,
+        array=np.zeros((num_steps, 3), dtype=np.float64)
+    ))
     i += 1
 
-print(f"Initialisierung abgeschlossen. Speicher für {num_steps} Schritte zugewiesen.")
-print(f"Anzahl der zu verfolgenen Geoms: {len(geom_metadata)}")
-# print("Geom-Metadaten:")
-# for meta in geom_metadata:
-#     print(f"  Geom Name: {meta['name']}, Array Shape: {meta['array'].shape}, ID: {meta['id']}")
-
-
-# Das Array für die Zeit initialisieren
+print(f"Metadaten initialisiert: {len(all_metadata)} Zeitreihen tracked.")
 time_array = np.zeros(num_steps, dtype=np.float64)
 
 # ---------------------------------------------------------
-# SIMULATION OHNE VIEWER
+# 6. SIMULATION
 # ---------------------------------------------------------
-if not USE_VIEWER:
 
-    print(f"Simulation ohne Viewer läuft für {SIM_TIME} Sekunden...")
-    start_wall = time.time()
-    
-    # 0. Starte mit Index 0 (t=0)
-    step_index = 0
-    
-    # Zustand t=0 speichern
-    time_array[step_index] = data.time
-    for meta in sensor_metadata:
-        meta['array'][step_index] = data.sensor(meta['index']).data
-    for meta in geom_metadata:
-        meta['array'][step_index] = data.geom_xpos[meta['id']]
+def run_simulation_steps(steps_count, start_index):
+    """Führt N Schritte aus und füllt die Arrays."""
+    idx = start_index
+    for _ in range(steps_count):
+        idx += 1
         
-    
-    # Schleife für die restlichen Schritte
-    steps_to_run = num_steps - 1
-
-    for _ in range(steps_to_run):
-            
-        # Inkrementiere den Index VOR dem Speichern des neuen Zustands
-        step_index += 1
-        
-        # --- Simulationsschritt ---
+        # Physics Step
         data.ctrl[0] = 0.2
         mj.mj_step(model, data)
         
-        # --- EFFIZIENTE DATENSPEICHERUNG ---
+        # --- DATEN SPEICHERN ---
+        time_array[idx] = data.time
         
-        # 1. Zeit speichern
-        time_array[step_index] = data.time
+        # 1. Kontakte berechnen (nur einmal pro Step)
+        current_contacts = get_geom_contact_forces(model, data, geom_id_to_name_map)
         
-        # 2. Speichere Geom-Positionen
-        for meta in geom_metadata:
-            meta['array'][step_index] = data.geom_xpos[meta['id']]
+        # 2. Durch alle Metadaten iterieren und Arrays füllen
+        for meta in all_metadata:
             
-        # 3. Speichere Sensorwerte
-        for meta in sensor_metadata:
-            meta['array'][step_index] = data.sensor(meta['index']).data
+            # -- Standard Sensoren --
+            if meta.group in SENSOR_MAPPING.values():
+                meta.array[idx] = data.sensor(meta.mujoco_id).data
             
-        
-        # Der REALTIME-Block sollte in Batch-Simulationen deaktiviert sein.
-        # if REALTIME:
-        #     time.sleep(model.opt.timestep)
-
-    
-    duration = time.time() - start_wall
-    final_data_length = step_index + 1
-    print(f"Simulation beendet. Daten für {step_index + 1} Schritte gespeichert.")
-    print(f"Dauer: {duration:.4f} Sekunden.")
-
-
-# ---------------------------------------------------------
-# SIMULATION MIT VIEWER
-# ---------------------------------------------------------
-else:
-    print("Simulation mit Viewer läuft...")
-    start_wall = time.time()
-
-    # Passiver Viewer oder normaler Viewer
-    launch_fn = viewer.launch_passive if VIEWER_PASSIVE else viewer.launch
-
-    with launch_fn(model, data) as v:
-
-        start = time.time()
-        while v.is_running() and time.time() - start < SIM_TIME:
-
-            step_start = time.time()
-
-            data.ctrl[0] = 0.2
-            positions_over_time.append(data.geom_xpos.copy())
-
-            mj.mj_step(model, data)
-
-            v.sync()   # Viewer aktualisieren
-
-            if REALTIME:
-                # Echtzeit-Synchronisation
-                dt = model.opt.timestep - (time.time() - step_start)
-                if dt > 0:
-                    time.sleep(dt)
-        duration = time.time() - start_wall
-        print(f"Simulation mit Viewer beendet. Dauer: {duration:.2f} Sekunden")
-        print("Viewer geschlossen.")
-
-
-# ---------------------------------------------------------
-# PLOTTEN
-# ---------------------------------------------------------
-
-def plot_sensors_grouped_np(sensor_np_dict: Dict[str, np.ndarray], title: str, time_data: np.ndarray):
-    """
-    Plottet Sensordaten aus den effizienten NumPy-Arrays (N x D).
-
-    sensor_np_dict: z.B. {"acc_0": array([[x, y, z], ...]), ...}
-    time_data: Das 1D NumPy Array mit den Zeitstempeln.
-    """
-
-    if not sensor_np_dict:
-        return
-
-    # Prüfe Dimension: 1D oder 3D Sensor?
-    any_key = next(iter(sensor_np_dict))
-    sample = sensor_np_dict[any_key]
-
-    # Die Dimension (D) ist die Anzahl der Spalten (1 oder 3)
-    D = sample.shape[1] 
-
-    if D == 3:
-        # ======== 3D Sensor (Vektor-Sensor) ============
-        fig, axs = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
-        fig.suptitle(f"{title} (Vektor-Sensor)", fontsize=16)
-
-        labels = ["X-Achse", "Y-Achse", "Z-Achse"]
-
-        for i, label in enumerate(labels):
-            ax = axs[i]
-            for name, values_array in sensor_np_dict.items():
-                # values_array[:, i] holt die i-te Spalte (X, Y oder Z)
-                ax.plot(time_data, values_array[:, i], label=name)
-            
-            ax.set_ylabel(label)
-            ax.grid(True, linestyle='--', alpha=0.6)
-            ax.legend(loc='lower right')
-
-        axs[-1].set_xlabel("Zeit (s)")
-        #plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Platz für Suptitle
-
-    elif D == 1:
-        # ======== 1D Sensor (Skalar-Sensor) ============
-        fig, ax = plt.subplots(figsize=(12, 6))
-        fig.suptitle(f"{title} (Skalar-Sensor)", fontsize=16)
-
-        for name, values_array in sensor_np_dict.items():
-            # values_array.squeeze() entfernt die unnötige 1er-Dimension (N x 1 -> N)
-            ax.plot(time_data, values_array.squeeze(), label=name)
-
-        ax.set_ylabel("Wert")
-        ax.set_xlabel("Zeit (s)")
-        ax.grid(True, linestyle='--', alpha=0.6)
-        ax.legend(loc='upper right')
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-
-    else:
-        print(f"WARNUNG: Sensor '{any_key}' hat Dimension {D}. Wird ignoriert.")
-
-
-def get_sliced_dict(data_dict: Dict[str, np.ndarray], final_length: int) -> Dict[str, np.ndarray]:
-    """Schneidet alle Arrays im Dictionary auf die tatsächliche Länge (Synchronisation)."""
-    return {name: arr[:final_length] for name, arr in data_dict.items()}
-
-def create_single_polars_dataframe(
-    sensor_groups: List[Tuple[str, Dict[str, np.ndarray]]], 
-    time_data: np.ndarray, 
-    final_length: int
-) -> pl.DataFrame:
-    """
-    Erstellt ein einziges, breites Polars DataFrame aus allen Sensor-Gruppen.
-    """
-    
-    # 1. Initialisiere mit der Zeitspalte
-    all_columns: List[pl.Series] = [pl.Series("time_s", time_data)]
-    
-    # 2. Iteriere durch alle Sensor-Gruppen
-    for group_prefix, data_dict_global in sensor_groups:
-        
-        if not data_dict_global:
-            print(f"Warnung: Gruppe '{group_prefix}' ist leer und wird ignoriert.")
-            continue
-
-        # A. Synchronisieren (schneiden) der Daten
-        sliced_data_dict = get_sliced_dict(data_dict_global, final_length)
-        
-        # Holen der Dimension für diese Gruppe
-        any_key = next(iter(sliced_data_dict))
-        values_array_sample = sliced_data_dict[any_key]
-        D = values_array_sample.shape[1]
-
-        # B. Spalten aus dem geschnittenen Dictionary erstellen
-        for name, values_array in sliced_data_dict.items():
-            
-            if D == 3:
-                # Vektor-Sensor (3D): Benennung: group_sensorname_Achse (z.B. acc_torso_X)
-                columns_prefix = name
-                all_columns.append(pl.Series(f"{columns_prefix}_X", values_array[:, 0]))
-                all_columns.append(pl.Series(f"{columns_prefix}_Y", values_array[:, 1]))
-                all_columns.append(pl.Series(f"{columns_prefix}_Z", values_array[:, 2]))
-            
-            elif D == 1:
-                # Skalar-Sensor (1D): Benennung: group_sensorname (z.B. tendon_frc_seil1)
-                column_name = name
-                all_columns.append(pl.Series(column_name, values_array.squeeze()))
+            # -- Geom Position --
+            elif meta.group == DataGroup.GEOM_POS:
+                meta.array[idx] = data.geom_xpos[meta.mujoco_id]
                 
-    # 3. DataFrame aus allen gesammelten Polars Series erstellen
-    return pl.DataFrame(all_columns)
+            # -- Kontaktkräfte --
+            elif meta.group == DataGroup.FORCE_LOCAL:
+                if meta.name in current_contacts:
+                    meta.array[idx] = current_contacts[meta.name]['force']
+                # Sonst bleibt es 0.0 (durch Initialisierung)
+                
+            elif meta.group == DataGroup.MOMENT_LOCAL:
+                if meta.name in current_contacts:
+                    meta.array[idx] = current_contacts[meta.name]['moment']
 
-if not USE_VIEWER: # Dies stellt sicher, dass es nach der Batch-Simulation läuft
+    return idx
+
+# --- HAUPTABLAUF ---
+
+if not USE_VIEWER:
+    print(f"Simulation (Headless) startet für {SIM_TIME}s...")
+    start_t = time.time()
     
-    # WICHTIG: Verwenden Sie hier das globale time_array aus dem effizienten Code
-    time_series_data = time_array[:step_index+1] # Nutzen Sie nur die tatsächlich geschriebenen Samples
-
+    # t=0 speichern (Initialzustand)
+    time_array[0] = data.time
+    # Hinweis: Bei t=0 sind Kräfte 0 und Sensoren ggf. auch, wir lassen es bei 0 stehen
     
-    # Definiere alle Sensor-Dictionaries, die du konvertieren möchtest
-    # Definiert die Reihenfolge und die zu verarbeitenden Daten
-    SENSOR_GROUPS_CONFIG: List[Tuple[str, Dict[str, np.ndarray]]] = [
-        ("acc", acc_over_time),
-        ("gyro", gyro_over_time),
-        ("tendon_frc", tendon_frc_over_time),
-        ("tendon_pos", tendon_pos_over_time),
-        ("tendon_vel", tendon_vel_over_time),
-        ("joint_pos", joint_pos_over_time),
-        ("joint_vel", joint_vel_over_time),
-        # ("geom_pos", positions_over_time), # Kann hinzugefügt werden
-    ]
-
-    #Ermitteln der finalen Länge (Synchronisation)
-    final_length = step_index + 1 
-    time_series_data = time_array[:final_length] 
-
-    print(f"Konvertiere alle {final_length} Samples in einen einzigen Polars DataFrame...")
-
-    #Erstellung des finalen DataFrames
-    final_wide_df = create_single_polars_dataframe(
-        SENSOR_GROUPS_CONFIG, 
-        time_series_data, 
-        final_length
-    )
+    final_step_idx = run_simulation_steps(num_steps - 1, 0)
     
-    print("\n--- ERGEBNIS: Breiter Polars DataFrame ---")
-    print(f"Gesamte Zeilen: {final_wide_df.shape[0]}")
-    print(f"Gesamte Spalten: {final_wide_df.shape[1]}")
-    print("\nKopfzeile (Head):")
-    print(final_wide_df.head(10))
+    print(f"Fertig in {time.time() - start_t:.4f}s.")
 
+else:
+    print("Simulation mit Viewer...")
+    launch_fn = viewer.launch_passive if VIEWER_PASSIVE else viewer.launch
+    with launch_fn(model, data) as v:
+        start_t = time.time()
+        curr_idx = 0
+        while v.is_running() and time.time() - start_t < SIM_TIME:
+            step_start = time.time()
+            
+            # Führe einen Schritt aus (hier vereinfacht direkt im Loop)
+            data.ctrl[0] = 0.2
+            mj.mj_step(model, data)
+            v.sync()
+            
+            # Daten speichern wäre hier analog zum headless mode nötig, 
+            # wird oft im Viewer-Modus weggelassen um Performance zu sparen.
+            
+            if REALTIME:
+                dt = model.opt.timestep - (time.time() - step_start)
+                if dt > 0: time.sleep(dt)
+        final_step_idx = 0 # Dummy für Viewer Mode
+
+# ---------------------------------------------------------
+# 7. DATEN-EXPORT (POLARS) & VISUALISIERUNG
+# ---------------------------------------------------------
+
+if not USE_VIEWER:
     
-    if PLOT_ACC_DATA and acc_over_time:
-        plot_sensors_grouped_np(acc_over_time, "Beschleunigungssensoren", time_series_data)
+    # Auf tatsächliche Länge kürzen
+    valid_len = final_step_idx + 1
+    t_data = time_array[:valid_len]
     
-    if PLOT_GYRO_DATA and gyro_over_time:
-        plot_sensors_grouped_np(gyro_over_time, "Gyroskop-Daten", time_series_data)
+    print("Erstelle DataFrame...")
+    
+    # Polars Columns erstellen
+    cols = [pl.Series("time_s", t_data)]
+    
+    for meta in all_metadata:
+        # Array kürzen
+        arr = meta.array[:valid_len]
         
-    if PLOT_TENDONFRC_DATA and tendon_frc_over_time:
-        plot_sensors_grouped_np(tendon_frc_over_time, "Seilkraft-Daten", time_series_data)
+        # Spaltennamen generieren: Gruppe_Name[_Achse]
+        base_name = f"{meta.group.value}_{meta.name}"
         
-    if PLOT_TENDONPOS_DATA and tendon_pos_over_time:
-        plot_sensors_grouped_np(tendon_pos_over_time, "Seilpositions-Daten", time_series_data)
-        
-    if PLOT_TENDOONVEL_DATA and tendon_vel_over_time:
-        plot_sensors_grouped_np(tendon_vel_over_time, "Seilgeschwindigkeits-Daten", time_series_data)
-        
-    if PLOT_JOINTPOS_DATA and joint_pos_over_time:
-        plot_sensors_grouped_np(joint_pos_over_time, "Gelenkpositions-Daten", time_series_data)
-        
-    if PLOT_JOINTVEL_DATA and joint_vel_over_time:
-        plot_sensors_grouped_np(joint_vel_over_time, "Gelenkgeschwindigkeits-Daten", time_series_data)
-
+        if meta.dim == 1:
+            cols.append(pl.Series(base_name, arr.squeeze()))
+        elif meta.dim == 3:
+            cols.append(pl.Series(f"{base_name}_X", arr[:, 0]))
+            cols.append(pl.Series(f"{base_name}_Y", arr[:, 1]))
+            cols.append(pl.Series(f"{base_name}_Z", arr[:, 2]))
+            
+    df = pl.DataFrame(cols)
     
-    plt.show() # Zeigt alle erstellten Matplotlib-Fenster an
+    print(f"DataFrame erstellt: {df.shape[0]} Zeilen, {df.shape[1]} Spalten.")
+    # print(df.head())
+
+    # --- PLOTTING ---
+    
+    def plot_group(group_enum: DataGroup, title: str):
+        """Plottet alle Daten einer bestimmten Gruppe."""
+        # Filtere relevante Metadaten
+        group_metas = [m for m in all_metadata if m.group == group_enum]
+        if not group_metas: return
+
+        # Check Dimension des ersten Elements
+        is_3d = (group_metas[0].dim == 3)
+        
+        if is_3d:
+            fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+            fig.suptitle(f"{title} (3D)", fontsize=14)
+            axes_labels = ["X", "Y", "Z"]
+            
+            for i, ax_lbl in enumerate(axes_labels):
+                for meta in group_metas:
+                    # Nur plotten wenn Daten nicht komplett null sind (optional)
+                    if np.max(np.abs(meta.array[:valid_len, i])) > 1e-6:
+                        axs[i].plot(t_data, meta.array[:valid_len, i], label=meta.name)
+                axs[i].set_ylabel(ax_lbl)
+                axs[i].grid(True, alpha=0.3)
+                # Legende nur oben, wenn nicht zu viele
+                if i == 0 and len(group_metas) < 15: axs[i].legend(fontsize='x-small', ncol=2)
+            axs[-1].set_xlabel("Zeit (s)")
+            
+        else:
+            plt.figure(figsize=(10, 5))
+            plt.title(f"{title} (1D)")
+            for meta in group_metas:
+                 if np.max(np.abs(meta.array[:valid_len])) > 1e-6:
+                    plt.plot(t_data, meta.array[:valid_len].squeeze(), label=meta.name)
+            plt.xlabel("Zeit (s)")
+            plt.ylabel("Wert")
+            plt.grid(True, alpha=0.3)
+            if len(group_metas) < 15: plt.legend(fontsize='x-small')
+
+    # Plots generieren basierend auf Config
+    if PLOT_CONFIG["ACC"]: plot_group(DataGroup.ACC, "Beschleunigung")
+    if PLOT_CONFIG["GYRO"]: plot_group(DataGroup.GYRO, "Gyroskop")
+    if PLOT_CONFIG["TENDON_FRC"]: plot_group(DataGroup.TENDON_FRC, "Seilkräfte")
+    if PLOT_CONFIG["GEOM_POS"]: plot_group(DataGroup.GEOM_POS, "Geom Positionen")
+    if PLOT_CONFIG["JOINT_POS"]: plot_group(DataGroup.JOINT_POS, "Gelenkwinkel")
+    if PLOT_CONFIG["FORCE_LOCAL"]: plot_group(DataGroup.FORCE_LOCAL, "Kontaktkräfte (Lokal)")
+    
+    plt.show()
