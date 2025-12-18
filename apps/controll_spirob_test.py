@@ -1,20 +1,56 @@
-import mujoco
+import mujoco as mj
 import mujoco.viewer as viewer
 import time
-
+import math_spirob.spirob_generator as sg
+import numpy as np
 # Modell aus XML-Datei laden
-model = mujoco.MjModel.from_xml_path("spiral_chain.xml")
+#model = mujoco.MjModel.from_xml_path("spiral_chain.xml")
+
+xml_string = sg.generate_xml_string(
+    L_target=0.30, base_d=0.06, tip_d=0.01, Delta_theta_deg=30,
+    model_name="spiral_chain_plot", auto_format=True
+)
+spec = mj.MjSpec.from_string(xml_string)
+
+cylinder = spec.worldbody.add_body(
+    name="cylinder",
+    pos=[0.1, 0.0, 0.1]
+)
+
+# cylinder.add_geom(
+#     name="cyl_geom",
+#     type=mj.mjtGeom.mjGEOM_BOX,  #mj.mjtGeom.mjGEOM_CYLINDER,
+#     size=[0.02, 0.1, 0.01], # radius, half-length, unused
+#     euler=[np.pi/2, 0, 0],
+#     rgba=[0.2, 0.8, 0.5, 1],
+#     density=1000
+# )
+
+cylinder.add_geom(
+    name="cyl_geom",
+    type=mj.mjtGeom.mjGEOM_CYLINDER,  #mj.mjtGeom.mjGEOM_CYLINDER,
+    size=[0.02, 0.1, 0.01], # radius, half-length, unused
+    euler=[np.pi/2, 0, 0],
+    rgba=[0.2, 0.8, 0.5, 1],
+    density=1000
+)
+
+spirob = spec.body('seg_0')
+
+
+model = spec.compile()
+
 
 # Simulationsdaten erstellen
-data = mujoco.MjData(model)
+data = mj.MjData(model)
 print("Modell und Simulationsdaten erfolgreich geladen.")
-print(data.geom_xpos)
+#print(data.geom_xpos)
 
 
-with mujoco.viewer.launch_passive(model, data) as viewer:
+with mj.viewer.launch_passive(model, data) as viewer:
   # Close the viewer automatically after 30 wall-seconds.
   start = time.time()
-  while viewer.is_running() and time.time() - start < 30:
+  while viewer.is_running() and time.time() - start < 360:
     step_start = time.time()
 
 
@@ -23,8 +59,8 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     #print(model.sensor('tendon0_pos'))   #.data
     #print(data.sensor('tendon0_vel'))
     #print(data.sensor('tendon1_frc'))
-    print(data.sensor('gyro_0'))
-    mujoco.mj_step(model, data)
+    #print(data.sensor('gyro_0'))
+    mj.mj_step(model, data)
 
 
 

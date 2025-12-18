@@ -1,0 +1,338 @@
+[
+    {
+        "L_target": 0.3,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.02,
+                0.1,
+                0.0
+            ],
+            "euler": [
+                90,
+                1,
+                1
+            ]
+        },
+        "id": "Run_001_Static_Cyl_Sz0.02-0.10-0.00_L0.30_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_cylinder"
+    },
+    {
+        "L_target": 0.3,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.05,
+                0.1,
+                0.0
+            ],
+            "euler": [
+                90,
+                1,
+                1
+            ]
+        },
+        "id": "Run_002_Static_Cyl_Sz0.05-0.10-0.00_L0.30_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_cylinder"
+    },
+    {
+        "L_target": 0.3,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.05,
+                0.1,
+                0.05
+            ],
+            "euler": [
+                0,
+                0,
+                0
+            ]
+        },
+        "id": "Run_003_Static_Box_Sz0.05-0.10-0.05_L0.30_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_box"
+    },
+    {
+        "L_target": 0.3,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.04,
+                0.1,
+                0.04
+            ],
+            "euler": [
+                0,
+                0,
+                0
+            ]
+        },
+        "id": "Run_004_Static_Box_Sz0.04-0.10-0.04_L0.30_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_box"
+    },
+    {
+        "L_target": 0.35,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.02,
+                0.1,
+                0.0
+            ],
+            "euler": [
+                90,
+                1,
+                1
+            ]
+        },
+        "id": "Run_005_Static_Cyl_Sz0.02-0.10-0.00_L0.35_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_cylinder"
+    },
+    {
+        "L_target": 0.35,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.05,
+                0.1,
+                0.0
+            ],
+            "euler": [
+                90,
+                1,
+                1
+            ]
+        },
+        "id": "Run_006_Static_Cyl_Sz0.05-0.10-0.00_L0.35_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_cylinder"
+    },
+    {
+        "L_target": 0.35,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.05,
+                0.1,
+                0.05
+            ],
+            "euler": [
+                0,
+                0,
+                0
+            ]
+        },
+        "id": "Run_007_Static_Box_Sz0.05-0.10-0.05_L0.35_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_box"
+    },
+    {
+        "L_target": 0.35,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.04,
+                0.1,
+                0.04
+            ],
+            "euler": [
+                0,
+                0,
+                0
+            ]
+        },
+        "id": "Run_008_Static_Box_Sz0.04-0.10-0.04_L0.35_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_box"
+    },
+    {
+        "L_target": 0.4,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.02,
+                0.1,
+                0.0
+            ],
+            "euler": [
+                90,
+                1,
+                1
+            ]
+        },
+        "id": "Run_009_Static_Cyl_Sz0.02-0.10-0.00_L0.40_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_cylinder"
+    },
+    {
+        "L_target": 0.4,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.05,
+                0.1,
+                0.0
+            ],
+            "euler": [
+                90,
+                1,
+                1
+            ]
+        },
+        "id": "Run_010_Static_Cyl_Sz0.05-0.10-0.00_L0.40_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_cylinder"
+    },
+    {
+        "L_target": 0.4,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.05,
+                0.1,
+                0.05
+            ],
+            "euler": [
+                0,
+                0,
+                0
+            ]
+        },
+        "id": "Run_011_Static_Box_Sz0.05-0.10-0.05_L0.40_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_box"
+    },
+    {
+        "L_target": 0.4,
+        "base_d": 0.05,
+        "sim_time": 2.0,
+        "tip_d": 0.01,
+        "Delta_theta_deg": 30,
+        "include_geom_pos": false,
+        "geom_kwargs": {
+            "pos": [
+                0.1,
+                0.0,
+                0.1
+            ],
+            "size": [
+                0.04,
+                0.1,
+                0.04
+            ],
+            "euler": [
+                0,
+                0,
+                0
+            ]
+        },
+        "id": "Run_012_Static_Box_Sz0.04-0.10-0.04_L0.40_T2.0",
+        "controller_info_str": "static_controller",
+        "geom_func_info_str": "setup_box"
+    }
+]

@@ -4,13 +4,17 @@ import math_spirob.spirob_simulate as spir_sim # Ihr Bibliotheksmodul
 import polars as pl
 from typing import List, Dict, Any, Union
 import itertools
+import numpy as np
 
 # --- 1. Konfiguration der Simulationsläufe ---
 
+ENABLE_REALTIME_VIEWER = True   #False,True
+BOOST_VIEWER = 0.3  # Geschwindigkeit des Viewers (1.0 = Echtzeit, >1.0 = schneller)
+
 VARIABLE_PARAMS = {
     "L_target": [0.30, 0.35, 0.40],
-    "base_d":   [0.05, 0.06, 0.07],
-    "sim_time": [2.0, 3.0, 4.0, 5.0],
+    "base_d":   [0.05],
+    "sim_time": [2.0],
     "controller": {
         "Static": spir_sim.static_controller,
         #"Sine": spir_sim.sine_controller,
@@ -18,13 +22,35 @@ VARIABLE_PARAMS = {
     },
 }
 
+GEOM_SCENARIOS = [
+    # Szenario 1: Zylinder (hat spezifische Größen für Zylinder)
+    {
+        "obj_name": "Cyl",           # Name für ID
+        "setup_func": spir_sim.setup_cylinder, # Die Funktion von oben
+        "params": {
+            "pos":  [[0.1, 0.0, 0.1]], 
+            "size": [[0.02, 0.1, 0.0], [0.05, 0.1, 0.0]], # radius, half-length, unused
+            "euler": [[90, 1, 1]]
+        }
+    },
+    # Szenario 2: Box (hat ganz andere Größen-Dimensionen)
+    {
+        "obj_name": "Box",
+        "setup_func": spir_sim.setup_box,
+        "params": {
+            "pos":  [[0.1, 0.0, 0.1]], # Box steht woanders
+            "size": [[0.05, 0.1, 0.05], [0.04, 0.1, 0.04]], # Würfel vs Riegel
+            "euler": [[0, 0, 0]]       # Box drehen wir nicht
+        }
+    }
+]
+
 # --- B. Feste Parameter (Der "Fixed Context") ---
 # Diese Werte werden zu JEDER Konfiguration hinzugefügt.
 FIXED_PARAMS = {
     "tip_d": 0.01,
     "Delta_theta_deg": 30,
     "include_geom_pos": False,
-    # Fügen Sie hier weitere Konstanten hinzu
 }
 
 # Liste zur Speicherung der Ergebnisse: Jedes Element ist ein Dict {config_data: ..., dataframe: ...}
@@ -34,10 +60,10 @@ final_results_list: List[Dict[str, Union[Dict[str, Any], pl.DataFrame]]] = []
 # --- 2. Iteration und Ausführung ---
 
 # --- Aufruf der Funktion ---
-SIM_CONFIGS = spir_sim.generate_grid_configs(VARIABLE_PARAMS, FIXED_PARAMS)
+SIM_CONFIGS = spir_sim.generate_hybrid_grid_configs(VARIABLE_PARAMS, GEOM_SCENARIOS, FIXED_PARAMS)
 print(f"Es wurden {len(SIM_CONFIGS)} Simulationsläufe für die Grid Search generiert.")
 spir_sim.print_configs_formatted(SIM_CONFIGS,preview_limit=5,print_all=False)
-#spir_sim.save_configs_to_json(SIM_CONFIGS, filename="simulation_configs.json")
+spir_sim.save_configs_to_json(SIM_CONFIGS, filename="simulation_configs.json")
 
 for config in SIM_CONFIGS:
     
@@ -58,6 +84,12 @@ for config in SIM_CONFIGS:
 
     # B. Modell laden und Daten initialisieren
     spec = mj.MjSpec.from_string(xml_string)
+
+    setup_func = config["geom_func"]
+    geom_args = config["geom_kwargs"]
+    #print(f"  Füge Geometrie hinzu:  mit Parametern {geom_args}")
+    setup_func(worldbody=spec.worldbody, **geom_args)
+
     model = spec.compile()
     data = mj.MjData(model)
     
@@ -69,7 +101,9 @@ for config in SIM_CONFIGS:
             data=data, 
             sim_time=config["sim_time"],
             controller=config["controller"], 
-            include_geom_pos=config["include_geom_pos"]
+            include_geom_pos=config["include_geom_pos"],
+            enable_viewer=ENABLE_REALTIME_VIEWER,
+            boost_viewer=BOOST_VIEWER
         )
     except Exception as e:
         print(f"Fehler in Lauf {run_id}: {e}")

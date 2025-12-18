@@ -58,6 +58,7 @@ def generate_xml_string(
     SensorRegistry.register("acc", "accelerometer")
     SensorRegistry.register("gyro", "gyro")
     SensorRegistry.register("angle", "jointpos")
+    SensorRegistry.register("joint_vel", "jointvel")
     SensorRegistry.register("tendon_frc", "tendonactuatorfrc")
     SensorRegistry.register("tendon_pos", "tendonpos")
     SensorRegistry.register("tendon_vel", "tendonvel")
@@ -516,6 +517,8 @@ class XMLBuilder:
         for i in range(N-1):
             if SensorRegistry.exists("angle"):
                 out.append(f'<{SensorRegistry.get_xml_tag("angle")} name="jointpos_{i}" joint="j_{i}"/>')
+            if SensorRegistry.exists("joint_vel"):
+                out.append(f'<{SensorRegistry.get_xml_tag("joint_vel")} name="jointvel_{i}" joint="j_{i}"/>')
         for i in range(N):
             if SensorRegistry.exists("gyro"):
                 out.append(f'<{SensorRegistry.get_xml_tag("gyro")} name="gyro_{i}" site="site_imu_{i}"/>')
