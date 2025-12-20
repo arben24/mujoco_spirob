@@ -256,6 +256,14 @@ def static_controller(model: mj.MjModel, data: mj.MjData, current_time: float, s
     #data.ctrl[0] = 0.2
     data.ctrl[1] = 0.3
 
+def ramped_controller(model: mj.MjModel, data: mj.MjData, current_time: float, step_index: int):
+    """Setzt eine linear ansteigende Kraft (0.0 bis 1.0 über 10 Sekunden) auf den ersten Aktuator."""
+    max_time = 10.0
+    max_force = 1.0
+    force = (current_time / max_time) * max_force
+    force = min(force, max_force)  # Begrenze auf max_force
+    data.ctrl[1] = force
+
 def sine_controller(model: mj.MjModel, data: mj.MjData, current_time: float, step_index: int):
     """Setzt eine sinusförmige Kraft (Amplitude 0.5, Frequenz 0.5 Hz) auf den ersten Aktuator."""
 

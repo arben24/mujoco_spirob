@@ -1,0 +1,82 @@
+import polars as pl
+from pathlib import Path
+import json
+from typing import Union, List
+from .data_schema import ExperimentRecord, SensorMeta, DataGroup, SensorMeta, DataGroup
+
+def generate_sensor_meta(df: pl.DataFrame) -> List[SensorMeta]:
+    """
+    Generates SensorMeta list from DataFrame columns.
+    Assumes column naming convention: group_name_X/Y/Z for 3D, group_name for 1D.
+    """
+    sensors = []
+    columns = df.columns
+    group_map = {
+        "acc": (DataGroup.ACC, "m/s^2"),
+        "gyro": (DataGroup.GYRO, "rad/s"),
+        "tendon_frc": (DataGroup.TENDON_FRC, "N"),
+        "tendon_pos": (DataGroup.TENDON_POS, "m"),
+        "tendon_vel": (DataGroup.TENDON_VEL, "m/s"),
+        "joint_pos": (DataGroup.JOINT_POS, "rad"),
+        "joint_vel": (DataGroup.JOINT_VEL, "rad/s"),
+        "geom_pos": (DataGroup.GEOM_POS, "m"),
+    }
+
+    for col in columns:
+        if col == "time_s":
+            continue
+        parts = col.split("_")
+        if len(parts) >= 2:
+            group_prefix = parts[0]
+            if group_prefix in group_map:
+                group, unit = group_map[group_prefix]
+                name = "_".join(parts[1:-1]) if len(parts) > 2 else parts[1]
+                if col.endswith("_X") or col.endswith("_Y") or col.endswith("_Z"):
+                    # 3D sensor
+                    base_name = col[:-2]  # remove _X
+                    if base_name + "_X" in columns and base_name + "_Y" in columns and base_name + "_Z" in columns:
+                        if not any(s.name == name and s.group == group for s in sensors):
+                            sensors.append(SensorMeta(
+                                name=name,
+                                group=group,
+                                dimension=3,
+                                unit=unit,
+                                columns=[base_name + "_X", base_name + "_Y", base_name + "_Z"]
+                            ))
+                else:
+                    # 1D sensor
+                    if not any(s.name == name and s.group == group for s in sensors):
+                        sensors.append(SensorMeta(
+                            name=name,
+                            group=group,
+                            dimension=1,
+                            unit=unit,
+                            columns=[col]
+                        ))
+    return sensors
+
+def save_experiment(df: pl.DataFrame, record: ExperimentRecord, base_dir: str = "build") -> str:
+    """
+    Saves the experiment data and metadata.
+
+    Args:
+        df: Polars DataFrame with time series data.
+        record: ExperimentRecord with metadata.
+        base_dir: Base directory for experiments.
+
+    Returns:
+        Path to the experiment folder.
+    """
+    base_path = Path(base_dir) / "experiments" / record.run_id
+    base_path.mkdir(parents=True, exist_ok=True)
+
+    # Save data as Parquet
+    data_path = base_path / "data.parquet"
+    df.write_parquet(str(data_path))
+
+    # Save metadata as JSON
+    meta_path = base_path / "meta.json"
+    with open(meta_path, 'w') as f:
+        json.dump(record.model_dump(mode='json'), f, indent=4)
+
+    return str(base_path)

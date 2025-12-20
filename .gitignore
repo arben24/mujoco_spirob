@@ -53,5 +53,6 @@ Thumbs.db
 *.xml
 *.csv
 *.TXT
+*.json
 
 MUJOCO_LOG.TXT

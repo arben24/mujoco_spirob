@@ -1,14 +1,17 @@
 import mujoco as mj
 import math_spirob.spirob_generator as sg
 import math_spirob.spirob_simulate as spir_sim # Ihr Bibliotheksmodul
+import math_spirob.data_schema as ds
+import math_spirob.exporter as exp
 import polars as pl
 from typing import List, Dict, Any, Union
 import itertools
 import numpy as np
+import os
 
 # --- 1. Konfiguration der Simulationsläufe ---
 
-ENABLE_REALTIME_VIEWER = True   #False,True
+ENABLE_REALTIME_VIEWER = False   #False,True
 BOOST_VIEWER = 0.3  # Geschwindigkeit des Viewers (1.0 = Echtzeit, >1.0 = schneller)
 
 VARIABLE_PARAMS = {
@@ -16,7 +19,8 @@ VARIABLE_PARAMS = {
     "base_d":   [0.05],
     "sim_time": [2.0],
     "controller": {
-        "Static": spir_sim.static_controller,
+        #"Static": spir_sim.static_controller,
+        "Ramped": spir_sim.ramped_controller,
         #"Sine": spir_sim.sine_controller,
         # "PID_K50": spir_sim.PIDController(target_pos=0.5, Kp=50.0, Ki=5.0) 
     },
@@ -30,19 +34,19 @@ GEOM_SCENARIOS = [
         "params": {
             "pos":  [[0.1, 0.0, 0.1]], 
             "size": [[0.02, 0.1, 0.0], [0.05, 0.1, 0.0]], # radius, half-length, unused
-            "euler": [[90, 1, 1]]
+            "euler": [[90, 0, 0]]       # Zylinder drehen wir um 90° um X
         }
     },
     # Szenario 2: Box (hat ganz andere Größen-Dimensionen)
-    {
-        "obj_name": "Box",
-        "setup_func": spir_sim.setup_box,
-        "params": {
-            "pos":  [[0.1, 0.0, 0.1]], # Box steht woanders
-            "size": [[0.05, 0.1, 0.05], [0.04, 0.1, 0.04]], # Würfel vs Riegel
-            "euler": [[0, 0, 0]]       # Box drehen wir nicht
-        }
-    }
+    # {
+    #     "obj_name": "Box",
+    #     "setup_func": spir_sim.setup_box,
+    #     "params": {
+    #         "pos":  [[0.1, 0.0, 0.1]], # Box steht woanders
+    #         "size": [[0.05, 0.1, 0.05], [0.04, 0.1, 0.04]], # Würfel vs Riegel
+    #         "euler": [[0, 0, 0]]       # Box drehen wir nicht
+    #     }
+    # }
 ]
 
 # --- B. Feste Parameter (Der "Fixed Context") ---
@@ -53,9 +57,9 @@ FIXED_PARAMS = {
     "include_geom_pos": False,
 }
 
-# Liste zur Speicherung der Ergebnisse: Jedes Element ist ein Dict {config_data: ..., dataframe: ...}
+# Liste zur Speicherung der Ergebnisse: Jedes Element ist ein Dict {record: ExperimentRecord}
 # Diese Liste wird nun das finale Ergebnis sein.
-final_results_list: List[Dict[str, Union[Dict[str, Any], pl.DataFrame]]] = []
+final_results_list: List[Dict[str, ds.ExperimentRecord]] = []
 
 # --- 2. Iteration und Ausführung ---
 
@@ -109,24 +113,27 @@ for config in SIM_CONFIGS:
         print(f"Fehler in Lauf {run_id}: {e}")
         continue 
 
-    # D. Metadaten als Spalten hinzufügen
-    current_df = current_df.with_columns([
-        pl.lit(run_id).alias("run_id"),
-        pl.lit(config["L_target"]).alias("L_target_val"),
-        pl.lit(config["base_d"]).alias("base_d_val"),
-        pl.lit(config["tip_d"]).alias("tip_d_val"),
-        pl.lit(config["Delta_theta_deg"]).alias("Delta_theta_deg_val"),
-        pl.lit(config["sim_time"]).alias("sim_time_s"),
-        pl.lit(str(config["controller"])).alias("controller_info"),
-    ])
+    # D. ExperimentRecord erstellen und speichern
+    exp_config = ds.ExperimentConfig(
+        L_target=config["L_target"],
+        base_d=config["base_d"],
+        tip_d=config["tip_d"],
+        Delta_theta_deg=config["Delta_theta_deg"],
+        sim_time=config["sim_time"],
+        controller_info=str(config["controller"]),
+        geom_type=config["geom_func"].__name__.replace('setup_', ''),
+        geom_params=config["geom_kwargs"],
+        include_geom_pos=config["include_geom_pos"]
+    )
+    sensors = exp.generate_sensor_meta(current_df)
+    record = ds.ExperimentRecord(run_id=run_id, config=exp_config, sensors=sensors)
+    exp.save_experiment(current_df, record)
     
     print(f"Erfolgreich beendet. DataFrame Shape: {current_df.shape}")
-    #print(f"  Spaltennamen: {current_df.columns}") # Zeigt die unterschiedlichen Spaltenzahlen
     
     # E. Ergebnis in die Dictionary-Struktur speichern
     final_results_list.append({
-        "config_data": config, 
-        "dataframe": current_df 
+        "record": record
     })
 
 # ---------------------------------------------------------
@@ -136,18 +143,14 @@ for config in SIM_CONFIGS:
 if final_results_list:
     print("\n--- ERGEBNISSE GESPEICHERT ---")
     
-    # for i, result in enumerate(final_results_list):
-    #     df = result["dataframe"]
-    #     cfg = result["config_data"]
+    for i, result in enumerate(final_results_list):
+        record = result["record"]
         
-    #     print(f"\nLauf {i+1} ({cfg['id']}):")
-    #     print(f"  Konfiguration: L_target={cfg['L_target']}, Time={cfg['sim_time']}")
-    #     print(f"  DataFrame Shape: {df.shape}")
-    #     print(f"  Kopfzeile:")
-    #     print(df.head(10))
+        print(f"\nLauf {i+1} ({record.run_id}):")
+        print(f"  Konfiguration: L_target={record.config.L_target}, Time={record.config.sim_time}")
+        print(f"  Sensoren: {len(record.sensors)}")
         
-    # Beispiel für den Zugriff auf den ersten Lauf:
-    run_1_df = final_results_list[0]["dataframe"]
+    print("Alle Experimente wurden als Parquet und JSON gespeichert.")
     
 else:
     print("Keine Ergebnisse erfolgreich erzeugt.")
