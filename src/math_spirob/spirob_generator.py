@@ -509,11 +509,11 @@ class XMLBuilder:
         out = ["  <sensor>"]
         for k in range(self.NUM_CABLES):
             if SensorRegistry.exists("tendon_frc"):
-                out.append(f'<{SensorRegistry.get_xml_tag("tendon_frc")} name="tendon{k}_frc" tendon="tendon_{k}"/>')
+                out.append(f'<{SensorRegistry.get_xml_tag("tendon_frc")} name="tendonfrc_{k}" tendon="tendon_{k}"/>')
             if SensorRegistry.exists("tendon_pos"):
-                out.append(f'<{SensorRegistry.get_xml_tag("tendon_pos")} name="tendon{k}_pos" tendon="tendon_{k}"/>')
+                out.append(f'<{SensorRegistry.get_xml_tag("tendon_pos")} name="tendonpos_{k}" tendon="tendon_{k}"/>')
             if SensorRegistry.exists("tendon_vel"):
-                out.append(f'<{SensorRegistry.get_xml_tag("tendon_vel")} name="tendon{k}_vel" tendon="tendon_{k}"/>')
+                out.append(f'<{SensorRegistry.get_xml_tag("tendon_vel")} name="tendonvel_{k}" tendon="tendon_{k}"/>')
         for i in range(N-1):
             if SensorRegistry.exists("angle"):
                 out.append(f'<{SensorRegistry.get_xml_tag("angle")} name="jointpos_{i}" joint="j_{i}"/>')

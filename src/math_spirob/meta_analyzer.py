@@ -22,16 +22,17 @@ def compute_metrics(record: ExperimentRecord, lf: pl.LazyFrame) -> Dict[str, Any
     """
     metrics = {}
 
-    # Find tendon_frc sensors
+    # Find tendon_frc sensors and compute min, max, mean for each
     tendon_sensors = [s for s in record.sensors if s.group == DataGroup.TENDON_FRC]
-    if tendon_sensors:
-        # Collect all columns for tendon_frc
-        tendon_columns = []
-        for sensor in tendon_sensors:
-            tendon_columns.extend(sensor.columns)
-        # Compute max across all tendon force columns
-        max_tendon_frc = lf.select(pl.max_horizontal(tendon_columns)).collect().item()
-        metrics["max_tendon_frc"] = max_tendon_frc
+    for sensor in tendon_sensors:
+        col = sensor.columns[0]  # Assuming dimension 1, so one column
+        sensor_name = sensor.name
+        min_val = lf.select(pl.col(col).min()).collect().item()
+        max_val = lf.select(pl.col(col).max()).collect().item()
+        mean_val = lf.select(pl.col(col).mean()).collect().item()
+        metrics[f"{sensor_name}_min"] = min_val
+        metrics[f"{sensor_name}_max"] = max_val
+        metrics[f"{sensor_name}_mean"] = mean_val
 
     # Add more metrics as needed, e.g., mean acc magnitude
     acc_sensors = [s for s in record.sensors if s.group == DataGroup.ACC]
@@ -83,24 +84,51 @@ def save_summary(df: pl.DataFrame, base_dir: str = "build"):
     df.write_csv(str(output_path))
     print(f"Summary saved to {output_path}")
 
-def plot_trends(df: pl.DataFrame, x_param: str = "L_target", y_metric: str = "mean_acc_x"):
+def plot_trends(df: pl.DataFrame, x_param: str = "L_target", y_metrics: List[str] = ["mean_acc_x"], title: str = None, figsize: tuple = (10, 6), hue: str = None, annotate_runs: bool = False):
     """
-    Plots a trend using matplotlib/seaborn.
+    Plots trends using matplotlib/seaborn. Supports multiple y_metrics.
+    If multiple y_metrics, uses subplots or a melted plot.
+    Set annotate_runs=True to label points with run_id.
     """
-    plt.figure(figsize=(10, 6))
-    sns.scatterplot(data=df.to_pandas(), x=x_param, y=y_metric)
-    plt.title(f"Trend: {y_metric} vs {x_param}")
-    plt.xlabel(x_param)
-    plt.ylabel(y_metric)
-    plt.grid(True)
-    plt.show()
+    df_pd = df.to_pandas()
+    
+    if len(y_metrics) == 1:
+        plt.figure(figsize=figsize)
+        ax = sns.scatterplot(data=df_pd, x=x_param, y=y_metrics[0], hue=hue)
+        plt.title(title or f"Trend: {y_metrics[0]} vs {x_param}")
+        plt.xlabel(x_param)
+        plt.ylabel(y_metrics[0])
+        plt.grid(True)
+        if annotate_runs:
+            for _, row in df_pd.iterrows():
+                ax.text(row[x_param], row[y_metrics[0]], row['run_id'], fontsize=8, ha='right')
+        plt.show()
+    else:
+        # For multiple y_metrics, melt the dataframe and plot
+        melted = df_pd.melt(id_vars=[x_param, hue, 'run_id'] if hue else [x_param, 'run_id'], value_vars=y_metrics, var_name='Metric', value_name='Value')
+        plt.figure(figsize=figsize)
+        ax = sns.scatterplot(data=melted, x=x_param, y='Value', hue='Metric', style=hue)
+        plt.title(title or f"Trends vs {x_param}")
+        plt.xlabel(x_param)
+        plt.ylabel("Value")
+        plt.grid(True)
+        if annotate_runs:
+            # For multiple metrics, annotate might be cluttered, but possible
+            for _, row in melted.iterrows():
+                ax.text(row[x_param], row['Value'], row['run_id'], fontsize=6, ha='right')
+        plt.show()
 
-def run_meta_analysis(base_dir: str = "build", plot: bool = True):
+def run_meta_analysis(base_dir: str = "build", plot: bool = False, y_metrics: List[str] = None):
     """
     Runs the full meta-analysis: aggregate, save, and optionally plot.
     """
     df = aggregate_experiments(base_dir)
     save_summary(df, base_dir)
     if plot:
-        plot_trends(df)
+        if y_metrics is None:
+            # Default to some metrics, e.g., tendonfrc means
+            y_metrics = [col for col in df.columns if col.endswith('_mean') and 'tendonfrc' in col]
+            if not y_metrics:
+                y_metrics = ["mean_acc_x"]
+        plot_trends(df, y_metrics=y_metrics)
     return df

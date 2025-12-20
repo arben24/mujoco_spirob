@@ -274,7 +274,6 @@ def sine_controller(model: mj.MjModel, data: mj.MjData, current_time: float, ste
 # Diese Funktionen werden SPÄTER im Loop aufgerufen
 def setup_cylinder(worldbody, pos, size, euler, **kwargs):
     body = worldbody.add_body(name="cylinder_obj", pos=pos)
-    print(f"  Erstelle Zylinder mit Größe {size} an Position {pos} mit Euler {euler}")
     body.add_geom(
         name="cyl_geom",
         type=mj.mjtGeom.mjGEOM_CYLINDER,
@@ -286,7 +285,6 @@ def setup_cylinder(worldbody, pos, size, euler, **kwargs):
 
 def setup_box(worldbody, pos, size, euler, **kwargs):
     body = worldbody.add_body(name="box_obj", pos=pos)
-    print(f"  Erstelle Box mit Größe {size} an Position {pos} mit Euler {euler}")
     body.add_geom(
         name="box_geom",
         type=mj.mjtGeom.mjGEOM_BOX,

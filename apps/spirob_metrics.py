@@ -15,8 +15,11 @@ ENABLE_REALTIME_VIEWER = False   #False,True
 BOOST_VIEWER = 0.3  # Geschwindigkeit des Viewers (1.0 = Echtzeit, >1.0 = schneller)
 
 VARIABLE_PARAMS = {
+    # "L_target": [0.30, 0.35, 0.40],
+    # "base_d":   [0.05, 0.07, 0.09],
+    # "sim_time": [2.0,3.0],
     "L_target": [0.30, 0.35, 0.40],
-    "base_d":   [0.05],
+    "base_d":   [0.05,0.08],
     "sim_time": [2.0],
     "controller": {
         #"Static": spir_sim.static_controller,
@@ -28,12 +31,21 @@ VARIABLE_PARAMS = {
 
 GEOM_SCENARIOS = [
     # Szenario 1: Zylinder (hat spezifische Größen für Zylinder)
-    {
+    # {
+    #     "obj_name": "Cyl",           # Name für ID
+    #     "setup_func": spir_sim.setup_cylinder, # Die Funktion von oben
+    #     "params": {
+    #         "pos":  [[0.1, 0.0, 0.1],[0.12, 0.0, 0.1],[0.1, 0.0, 0.12],[0.1, 0.0, 0.08]], 
+    #         "size": [[0.02, 0.1, 0.0], [0.05, 0.1, 0.0], [0.08, 0.1, 0.0], [0.03, 0.1, 0.0], [0.06, 0.1, 0.0]], # radius, half-length, unused
+    #         "euler": [[90, 0, 0]]       # Zylinder drehen wir um 90° um X
+    #     }
+    # },
+        {
         "obj_name": "Cyl",           # Name für ID
         "setup_func": spir_sim.setup_cylinder, # Die Funktion von oben
         "params": {
-            "pos":  [[0.1, 0.0, 0.1]], 
-            "size": [[0.02, 0.1, 0.0], [0.05, 0.1, 0.0]], # radius, half-length, unused
+            "pos":  [[0.1, 0.0, 0.1],], 
+            "size": [[0.02, 0.1, 0.0], [0.06, 0.1, 0.0]], # radius, half-length, unused
             "euler": [[90, 0, 0]]       # Zylinder drehen wir um 90° um X
         }
     },

@@ -14,12 +14,12 @@ def generate_sensor_meta(df: pl.DataFrame) -> List[SensorMeta]:
     group_map = {
         "acc": (DataGroup.ACC, "m/s^2"),
         "gyro": (DataGroup.GYRO, "rad/s"),
-        "tendon_frc": (DataGroup.TENDON_FRC, "N"),
-        "tendon_pos": (DataGroup.TENDON_POS, "m"),
-        "tendon_vel": (DataGroup.TENDON_VEL, "m/s"),
-        "joint_pos": (DataGroup.JOINT_POS, "rad"),
-        "joint_vel": (DataGroup.JOINT_VEL, "rad/s"),
-        "geom_pos": (DataGroup.GEOM_POS, "m"),
+        "tendonfrc": (DataGroup.TENDON_FRC, "N"),
+        "tendonpos": (DataGroup.TENDON_POS, "m"),
+        "tendonvel": (DataGroup.TENDON_VEL, "m/s"),
+        "jointpos": (DataGroup.JOINT_POS, "rad"),
+        "jointvel": (DataGroup.JOINT_VEL, "rad/s"),
+        "geompos": (DataGroup.GEOM_POS, "m"),
     }
 
     for col in columns:
@@ -30,7 +30,7 @@ def generate_sensor_meta(df: pl.DataFrame) -> List[SensorMeta]:
             group_prefix = parts[0]
             if group_prefix in group_map:
                 group, unit = group_map[group_prefix]
-                name = "_".join(parts[1:-1]) if len(parts) > 2 else parts[1]
+                name = "_".join(parts[0:-1]) if len(parts) > 2 else "_".join([parts[0], parts[1]])  # naming takes place here
                 if col.endswith("_X") or col.endswith("_Y") or col.endswith("_Z"):
                     # 3D sensor
                     base_name = col[:-2]  # remove _X
