@@ -111,8 +111,8 @@ for config in SIM_CONFIGS:
     
     # C. Simulation ausführen
     current_df = None
-    try:
-        current_df = spir_sim.run_simulation_and_get_dataframe(
+    #try:
+    current_df = spir_sim.run_simulation_and_get_dataframe(
             model=model, 
             data=data, 
             sim_time=config["sim_time"],
@@ -121,9 +121,9 @@ for config in SIM_CONFIGS:
             enable_viewer=ENABLE_REALTIME_VIEWER,
             boost_viewer=BOOST_VIEWER
         )
-    except Exception as e:
-        print(f"Fehler in Lauf {run_id}: {e}")
-        continue 
+    # except Exception as e:
+    #     print(f"Fehler in Lauf {run_id}: {e}")
+    #     continue 
 
     # D. ExperimentRecord erstellen und speichern
     exp_config = ds.ExperimentConfig(

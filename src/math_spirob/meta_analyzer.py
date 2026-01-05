@@ -18,7 +18,6 @@ def crawl_experiments(base_dir: str = "build") -> List[str]:
 def compute_metrics(record: ExperimentRecord, lf: pl.LazyFrame) -> Dict[str, Any]:
     """
     Computes metrics for an experiment using lazy Polars operations.
-    Example: Max tendon force across all tendon_frc sensors.
     """
     metrics = {}
 
@@ -34,15 +33,59 @@ def compute_metrics(record: ExperimentRecord, lf: pl.LazyFrame) -> Dict[str, Any
         metrics[f"{sensor_name}_max"] = max_val
         metrics[f"{sensor_name}_mean"] = mean_val
 
-    # Add more metrics as needed, e.g., mean acc magnitude
+    # Compute statistics for ACC sensors (x, y, z axes)
     acc_sensors = [s for s in record.sensors if s.group == DataGroup.ACC]
-    if acc_sensors:
-        acc_columns = []
-        for sensor in acc_sensors:
-            acc_columns.extend(sensor.columns)
-        # Compute mean of magnitudes (sqrt(x^2 + y^2 + z^2)) but simplified: mean of x for now
-        mean_acc_x = lf.select(pl.col(acc_columns[0]).mean()).collect().item()  # Assuming first acc sensor x
-        metrics["mean_acc_x"] = mean_acc_x
+    for sensor in acc_sensors:
+        for col in sensor.columns:
+            axis = col.split('_')[-1]  # 'X', 'Y', 'Z'
+            mean_val = lf.select(pl.col(col).mean()).collect().item()
+            std_val = lf.select(pl.col(col).std()).collect().item()
+            min_val = lf.select(pl.col(col).min()).collect().item()
+            max_val = lf.select(pl.col(col).max()).collect().item()
+            skew_val = lf.select(pl.col(col).skew()).collect().item()
+            kurt_val = lf.select(pl.col(col).kurtosis()).collect().item()
+            metrics[f"{sensor.name}_{axis}_mean"] = mean_val
+            metrics[f"{sensor.name}_{axis}_std"] = std_val
+            metrics[f"{sensor.name}_{axis}_min"] = min_val
+            metrics[f"{sensor.name}_{axis}_max"] = max_val
+            metrics[f"{sensor.name}_{axis}_skew"] = skew_val
+            metrics[f"{sensor.name}_{axis}_kurtosis"] = kurt_val
+
+    # Compute statistics for GYRO sensors (x, y, z axes)
+    gyro_sensors = [s for s in record.sensors if s.group == DataGroup.GYRO]
+    for sensor in gyro_sensors:
+        for col in sensor.columns:
+            axis = col.split('_')[-1]  # 'X', 'Y', 'Z'
+            mean_val = lf.select(pl.col(col).mean()).collect().item()
+            std_val = lf.select(pl.col(col).std()).collect().item()
+            min_val = lf.select(pl.col(col).min()).collect().item()
+            max_val = lf.select(pl.col(col).max()).collect().item()
+            skew_val = lf.select(pl.col(col).skew()).collect().item()
+            kurt_val = lf.select(pl.col(col).kurtosis()).collect().item()
+            metrics[f"{sensor.name}_{axis}_mean"] = mean_val
+            metrics[f"{sensor.name}_{axis}_std"] = std_val
+            metrics[f"{sensor.name}_{axis}_min"] = min_val
+            metrics[f"{sensor.name}_{axis}_max"] = max_val
+            metrics[f"{sensor.name}_{axis}_skew"] = skew_val
+            metrics[f"{sensor.name}_{axis}_kurtosis"] = kurt_val
+
+    # Compute statistics for BODY_CONTACT_FRC sensors (x, y, z axes)
+    body_contact_sensors = [s for s in record.sensors if s.group == DataGroup.BODY_CONTACT_FRC]
+    for sensor in body_contact_sensors:
+        for col in sensor.columns:
+            axis = col.split('_')[-1]  # 'X', 'Y', 'Z'
+            mean_val = lf.select(pl.col(col).mean()).collect().item()
+            std_val = lf.select(pl.col(col).std()).collect().item()
+            min_val = lf.select(pl.col(col).min()).collect().item()
+            max_val = lf.select(pl.col(col).max()).collect().item()
+            skew_val = lf.select(pl.col(col).skew()).collect().item()
+            kurt_val = lf.select(pl.col(col).kurtosis()).collect().item()
+            metrics[f"{sensor.name}_{axis}_mean"] = mean_val
+            metrics[f"{sensor.name}_{axis}_std"] = std_val
+            metrics[f"{sensor.name}_{axis}_min"] = min_val
+            metrics[f"{sensor.name}_{axis}_max"] = max_val
+            metrics[f"{sensor.name}_{axis}_skew"] = skew_val
+            metrics[f"{sensor.name}_{axis}_kurtosis"] = kurt_val
 
     return metrics
 
@@ -78,11 +121,40 @@ def aggregate_experiments(base_dir: str = "build") -> pl.DataFrame:
 
 def save_summary(df: pl.DataFrame, base_dir: str = "build"):
     """
-    Saves the summary DataFrame to CSV.
+    Saves the summary DataFrame to CSV and Parquet formats.
+    Parquet is preferred for efficient storage and loading of columnar data with many columns.
     """
-    output_path = Path(base_dir) / "meta_analysis_summary.csv"
-    df.write_csv(str(output_path))
-    print(f"Summary saved to {output_path}")
+    output_path_csv = Path(base_dir) / "meta_analysis_summary.csv"
+    output_path_parquet = Path(base_dir) / "meta_analysis_summary.parquet"
+    df.write_csv(str(output_path_csv))
+    df.write_parquet(str(output_path_parquet))
+    print(f"Summary saved to {output_path_csv} and {output_path_parquet}")
+
+def load_summary_parquet(base_dir: str = "build") -> pl.DataFrame:
+    """
+    Loads the summary DataFrame from Parquet format.
+    """
+    output_path_parquet = Path(base_dir) / "meta_analysis_summary.parquet"
+    if not output_path_parquet.exists():
+        raise FileNotFoundError(f"Summary Parquet file not found: {output_path_parquet}")
+    return pl.read_parquet(str(output_path_parquet))
+
+def load_multiple_summaries_parquet(experiment_ids: List[str], base_dir: str = "build") -> pl.DataFrame:
+    """
+    Loads and concatenates summary DataFrames for multiple experiments from Parquet.
+    Adds an 'experiment_id' column for identification.
+    """
+    dfs = []
+    for exp_id in experiment_ids:
+        try:
+            df = load_summary_parquet(base_dir)
+            df = df.filter(pl.col("run_id") == exp_id).with_columns(pl.lit(exp_id).alias("experiment_id"))
+            dfs.append(df)
+        except FileNotFoundError:
+            print(f"Warning: Summary for {exp_id} not found.")
+    if not dfs:
+        raise ValueError("No summaries found for the given experiment IDs.")
+    return pl.concat(dfs)
 
 def plot_trends(df: pl.DataFrame, x_param: str = "L_target", y_metrics: List[str] = ["mean_acc_x"], title: str = None, figsize: tuple = (10, 6), hue: str = None, annotate_runs: bool = False):
     """

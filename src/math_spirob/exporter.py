@@ -20,11 +20,26 @@ def generate_sensor_meta(df: pl.DataFrame) -> List[SensorMeta]:
         "jointpos": (DataGroup.JOINT_POS, "rad"),
         "jointvel": (DataGroup.JOINT_VEL, "rad/s"),
         "geompos": (DataGroup.GEOM_POS, "m"),
+        "bodycontactfrc": (DataGroup.BODY_CONTACT_FRC, "N"),
     }
 
     for col in columns:
         if col == "time_s":
             continue
+        # Special handling for body contact forces
+        if col.startswith("body_") and "_contact_force_" in col and col.endswith(("_X", "_Y", "_Z")):
+            base_name = col[:-2]
+            if base_name + "_X" in columns and base_name + "_Y" in columns and base_name + "_Z" in columns:
+                name = base_name
+                if not any(s.name == name and s.group == DataGroup.BODY_CONTACT_FRC for s in sensors):
+                    sensors.append(SensorMeta(
+                        name=name,
+                        group=DataGroup.BODY_CONTACT_FRC,
+                        dimension=3,
+                        unit="N",
+                        columns=[base_name + "_X", base_name + "_Y", base_name + "_Z"]
+                    ))
+            continue  # Skip further processing for this column
         parts = col.split("_")
         if len(parts) >= 2:
             group_prefix = parts[0]
@@ -73,6 +88,11 @@ def save_experiment(df: pl.DataFrame, record: ExperimentRecord, base_dir: str = 
     # Save data as Parquet
     data_path = base_path / "data.parquet"
     df.write_parquet(str(data_path))
+
+    # Validate that body contact force columns are present
+    body_force_cols = [col for col in df.columns if col.startswith("body_") and "_contact_force_" in col]
+    if not body_force_cols:
+        raise ValueError(f"No body contact force columns found in {data_path}. Body forces may not be included in the DataFrame.")
 
     # Save metadata as JSON
     meta_path = base_path / "meta.json"

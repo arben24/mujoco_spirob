@@ -14,6 +14,7 @@ class DataGroup(Enum):
     GEOM_POS = "geom_position"
     FORCE_LOCAL = "force_local"
     FORCE_GLOBAL = "force_global"
+    BODY_CONTACT_FRC = "body_contact_force"
 
 class SensorMeta(BaseModel):
     name: str = Field(..., description="Name of the sensor or geom")

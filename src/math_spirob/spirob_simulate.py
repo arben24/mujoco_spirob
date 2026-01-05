@@ -13,6 +13,41 @@ import time
 # und den Schrittindex (int) als Argumente akzeptieren.
 ControllerFunc = Callable[[mj.MjModel, mj.MjData, float, int], None]
 
+# --- Helper function for body contact forces ---
+
+def extract_body_contact_forces(model: mj.MjModel, data: mj.MjData) -> Dict[int, np.ndarray]:
+    """
+    Extracts the total contact forces for each body in world frame.
+    
+    Returns a dict body_id -> np.array([Fx, Fy, Fz]) in world coordinates.
+    """
+    body_forces = {i: np.zeros(3, dtype=np.float64) for i in range(model.nbody)}
+    
+    for contact_id in range(data.ncon):
+        contact = data.contact[contact_id]
+        
+        # Get force in contact frame (6D: Fx, Fy, Fz, Tx, Ty, Tz)
+        force = np.zeros(6, dtype=np.float64)
+        mj.mj_contactForce(model, data, contact_id, force)
+        
+        # Transform force from contact frame to world frame
+        # contact.frame is a flat array of 9 floats representing the 3x3 rotation matrix
+        # from contact frame to world frame. Reshape and multiply.
+        if len(contact.frame) != 9:
+            raise ValueError(f"contact.frame has unexpected length: {len(contact.frame)}")
+        rotation_matrix = contact.frame.reshape(3, 3)
+        force_world = rotation_matrix @ force[:3]  # F_world = R_contact_to_world @ F_contact
+        
+        # Get body IDs
+        body1 = model.geom_bodyid[contact.geom1]
+        body2 = model.geom_bodyid[contact.geom2]
+        
+        # Apply forces: body1 gets -force, body2 gets +force
+        body_forces[body1] -= force_world
+        body_forces[body2] += force_world
+    
+    return body_forces
+
 # --- 1. Helper-Funktionen (Datenverarbeitung) ---
 
 def get_sliced_dict(data_dict: Dict[str, np.ndarray], final_length: int) -> Dict[str, np.ndarray]:
@@ -41,24 +76,30 @@ def create_single_polars_dataframe(
         
         for name, values_array in sliced_data_dict.items():
             
+            # Special handling for body contact forces
+            if group_prefix == "bodycontactfrc":
+                sensor_name = f"body_{name}_contact_force"
+            else:
+                sensor_name = name
+            
             # Bestimmung der Dimension (D) für diesen spezifischen Sensor
             current_D = values_array.shape[1] if values_array.ndim == 2 else 1
             
             if current_D == 3:
                 # 3D: Benennung: sensorname_X/Y/Z
-                columns_prefix = name
+                columns_prefix = sensor_name
                 all_columns.append(pl.Series(f"{columns_prefix}_X", values_array[:, 0]))
                 all_columns.append(pl.Series(f"{columns_prefix}_Y", values_array[:, 1]))
                 all_columns.append(pl.Series(f"{columns_prefix}_Z", values_array[:, 2]))
             
             elif current_D == 1:
                 # 1D: Benennung: sensorname
-                column_name = name
+                column_name = sensor_name
                 all_columns.append(pl.Series(column_name, values_array.squeeze()))
             
             else:
                 # Optionale Warnung für unbekannte Dimensionen
-                print(f"Warnung: Sensor '{name}' in Gruppe '{group_prefix}' hat Dimension {current_D} und wird ignoriert.")
+                print(f"Warnung: Sensor '{sensor_name}' in Gruppe '{group_prefix}' hat Dimension {current_D} und wird ignoriert.")
                 
     return pl.DataFrame(all_columns)
 
@@ -73,6 +114,7 @@ def initialize_data_structures(model: mj.MjModel, sim_time: float) -> Tuple[Dict
     acc_over_time, gyro_over_time, tendon_frc_over_time, tendon_pos_over_time, \
     tendon_vel_over_time, joint_pos_over_time, joint_vel_over_time = {}, {}, {}, {}, {}, {}, {}
     positions_over_time = {} # Für Geoms
+    body_contact_force_over_time = {} # Für Body-Kontaktkräfte
     
     SENSOR_CONFIG = {
         mj.mjtSensor.mjSENS_ACCELEROMETER:    ('acc',    acc_over_time),
@@ -104,6 +146,18 @@ def initialize_data_structures(model: mj.MjModel, sim_time: float) -> Tuple[Dict
                 'index': i                  
             })
 
+    # 1b. Body-Kontaktkräfte initialisieren
+    body_metadata = []
+    for i in range(1, model.nbody):  # Skip worldbody (0)
+        body_name = mj.mj_id2name(model, mj.mjtObj.mjOBJ_BODY, i)
+        force_array = np.zeros((num_steps, 3), dtype=np.float64)  # Fx, Fy, Fz
+        body_contact_force_over_time[body_name] = force_array
+        body_metadata.append({
+            'name': body_name,
+            'array': force_array,
+            'id': i
+        })
+
     # 2. Geoms initialisieren
     geom_metadata = []
     i = 0
@@ -129,10 +183,10 @@ def initialize_data_structures(model: mj.MjModel, sim_time: float) -> Tuple[Dict
         "acc": acc_over_time, "gyro": gyro_over_time, "tendon_frc": tendon_frc_over_time, 
         "tendon_pos": tendon_pos_over_time, "tendon_vel": tendon_vel_over_time, 
         "joint_pos": joint_pos_over_time, "joint_vel": joint_vel_over_time, 
-        "geom_pos": positions_over_time
+        "geom_pos": positions_over_time, "bodycontactfrc": body_contact_force_over_time
     }
 
-    return sensor_dicts, sensor_metadata, geom_metadata, time_array, num_steps
+    return sensor_dicts, sensor_metadata, geom_metadata, body_metadata, time_array, num_steps
 
 def run_simulation_and_get_dataframe(
     model: mj.MjModel, 
@@ -148,7 +202,7 @@ def run_simulation_and_get_dataframe(
     """
     
     # Initialisiere alle Speicherstrukturen
-    sensor_dicts, sensor_metadata, geom_metadata, time_array, num_steps = \
+    sensor_dicts, sensor_metadata, geom_metadata, body_metadata, time_array, num_steps = \
         initialize_data_structures(model, sim_time)
         
     # --- 1. Simulation ---
@@ -189,6 +243,11 @@ def run_simulation_and_get_dataframe(
                     if include_geom_pos:
                         for meta in geom_metadata:
                             meta['array'][step_index] = data.geom_xpos[meta['id']]
+                    
+                    # Sammle Body-Kontaktkräfte
+                    body_forces = extract_body_contact_forces(model, data)
+                    for meta in body_metadata:
+                        meta['array'][step_index] = body_forces[meta['id']]
 
                 # GUI aktualisieren
                 viewer.sync()
@@ -220,6 +279,11 @@ def run_simulation_and_get_dataframe(
             if include_geom_pos:
                 for meta in geom_metadata:
                     meta['array'][step_index] = data.geom_xpos[meta['id']]
+            
+            # Sammle Body-Kontaktkräfte
+            body_forces = extract_body_contact_forces(model, data)
+            for meta in body_metadata:
+                meta['array'][step_index] = body_forces[meta['id']]
 
     final_length = step_index + 1
     time_series_data = time_array[:final_length] 
@@ -234,6 +298,7 @@ def run_simulation_and_get_dataframe(
         ("tendon_vel", sensor_dicts["tendon_vel"]),
         ("joint_pos", sensor_dicts["joint_pos"]),
         ("joint_vel", sensor_dicts["joint_vel"]),
+        ("bodycontactfrc", sensor_dicts["bodycontactfrc"]),
     ]
     
     if include_geom_pos:
