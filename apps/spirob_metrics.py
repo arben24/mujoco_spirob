@@ -11,8 +11,8 @@ import os
 
 # --- 1. Konfiguration der Simulationsläufe ---
 
-ENABLE_REALTIME_VIEWER = False   #False,True
-BOOST_VIEWER = 0.3  # Geschwindigkeit des Viewers (1.0 = Echtzeit, >1.0 = schneller)
+ENABLE_REALTIME_VIEWER = True   #False,True
+BOOST_VIEWER = 1.5  # Geschwindigkeit des Viewers (1.0 = Echtzeit, >1.0 = schneller)
 
 VARIABLE_PARAMS = {
     # "L_target": [0.30, 0.35, 0.40],
@@ -49,7 +49,7 @@ GEOM_SCENARIOS = [
             "euler": [[90, 0, 0]]       # Zylinder drehen wir um 90° um X
         }
     },
-    # Szenario 2: Box (hat ganz andere Größen-Dimensionen)
+    #Szenario 2: Box (hat ganz andere Größen-Dimensionen)
     # {
     #     "obj_name": "Box",
     #     "setup_func": spir_sim.setup_box,

@@ -20,6 +20,13 @@ def extract_body_contact_forces(model: mj.MjModel, data: mj.MjData) -> Dict[int,
     Extracts the total contact forces for each body in world frame.
     
     Returns a dict body_id -> np.array([Fx, Fy, Fz]) in world coordinates.
+    
+    Frame Convention:
+    - mj_contactForce returns force[:3] in the contact frame, where force is the force applied to geom1 by geom2.
+    - contact.frame is the 3x3 rotation matrix from contact frame to world frame.
+    - Thus, F_world = contact.frame @ force[:3] gives the force on geom1 in world coordinates.
+    - The force on geom2 is -F_world.
+    - body_forces[body1] accumulates +F_world (force on body1), body_forces[body2] accumulates -F_world.
     """
     body_forces = {i: np.zeros(3, dtype=np.float64) for i in range(model.nbody)}
     
@@ -31,20 +38,21 @@ def extract_body_contact_forces(model: mj.MjModel, data: mj.MjData) -> Dict[int,
         mj.mj_contactForce(model, data, contact_id, force)
         
         # Transform force from contact frame to world frame
-        # contact.frame is a flat array of 9 floats representing the 3x3 rotation matrix
-        # from contact frame to world frame. Reshape and multiply.
+        # contact.frame is rotation matrix: contact -> world
         if len(contact.frame) != 9:
             raise ValueError(f"contact.frame has unexpected length: {len(contact.frame)}")
         rotation_matrix = contact.frame.reshape(3, 3)
         force_world = rotation_matrix @ force[:3]  # F_world = R_contact_to_world @ F_contact
-        
+        #print(f"Contact ID {contact_id}: force_contact={force[:3]}, force_world={force_world}")
+        #print(rotation_matrix)
+
         # Get body IDs
         body1 = model.geom_bodyid[contact.geom1]
         body2 = model.geom_bodyid[contact.geom2]
         
-        # Apply forces: body1 gets -force, body2 gets +force
-        body_forces[body1] -= force_world
-        body_forces[body2] += force_world
+        # Apply forces: body1 gets +force_world, body2 gets -force_world
+        body_forces[body1] += force_world
+        body_forces[body2] -= force_world
     
     return body_forces
 
