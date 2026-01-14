@@ -8,11 +8,12 @@ from typing import List, Dict, Any, Union
 import itertools
 import numpy as np
 import os
+import argparse
 
 # --- 1. Konfiguration der Simulationsläufe ---
 
-ENABLE_REALTIME_VIEWER = True   #False,True
-BOOST_VIEWER = 1.5  # Geschwindigkeit des Viewers (1.0 = Echtzeit, >1.0 = schneller)
+ENABLE_REALTIME_VIEWER = False   #False,True
+BOOST_VIEWER = 1.0  # Geschwindigkeit des Viewers (1.0 = Echtzeit, >1.0 = schneller)
 
 VARIABLE_PARAMS = {
     # "L_target": [0.30, 0.35, 0.40],
@@ -45,7 +46,7 @@ GEOM_SCENARIOS = [
         "setup_func": spir_sim.setup_cylinder, # Die Funktion von oben
         "params": {
             "pos":  [[0.1, 0.0, 0.1],], 
-            "size": [[0.02, 0.1, 0.0], [0.06, 0.1, 0.0]], # radius, half-length, unused
+            "size": [[0.04, 0.1, 0.0], [0.06, 0.1, 0.0]], # radius, half-length, unused
             "euler": [[90, 0, 0]]       # Zylinder drehen wir um 90° um X
         }
     },
@@ -72,6 +73,27 @@ FIXED_PARAMS = {
 # Liste zur Speicherung der Ergebnisse: Jedes Element ist ein Dict {record: ExperimentRecord}
 # Diese Liste wird nun das finale Ergebnis sein.
 final_results_list: List[Dict[str, ds.ExperimentRecord]] = []
+
+# --- CLI Parser ---
+parser = argparse.ArgumentParser(description="SpiRob Simulation Metrics")
+parser.add_argument(
+    "--record-video",
+    action="store_true",
+    help="Record and save a MuJoCo video for each run."
+)
+parser.add_argument(
+    "--video-resolution",
+    type=str,
+    default="1280x720",
+    help="Video resolution as WIDTHxHEIGHT (default: 1280x720)"
+)
+parser.add_argument(
+    "--video-fps",
+    type=int,
+    default=30,
+    help="Video FPS (default: 30)"
+)
+args = parser.parse_args()
 
 # --- 2. Iteration und Ausführung ---
 
@@ -112,6 +134,16 @@ for config in SIM_CONFIGS:
     # C. Simulation ausführen
     current_df = None
     #try:
+    video_path = spir_sim.get_video_path(run_id) if args.record_video else None
+    
+    # Parse video resolution
+    try:
+        width, height = map(int, args.video_resolution.split('x'))
+        video_resolution = (width, height)
+    except ValueError:
+        print(f"Invalid video resolution format: {args.video_resolution}. Using default 1280x720.")
+        video_resolution = (1280, 720)
+    
     current_df = spir_sim.run_simulation_and_get_dataframe(
             model=model, 
             data=data, 
@@ -119,7 +151,11 @@ for config in SIM_CONFIGS:
             controller=config["controller"], 
             include_geom_pos=config["include_geom_pos"],
             enable_viewer=ENABLE_REALTIME_VIEWER,
-            boost_viewer=BOOST_VIEWER
+            boost_viewer=BOOST_VIEWER,
+            record_video=args.record_video,
+            video_path=video_path,
+            video_resolution=video_resolution,
+            video_fps=args.video_fps,
         )
     # except Exception as e:
     #     print(f"Fehler in Lauf {run_id}: {e}")

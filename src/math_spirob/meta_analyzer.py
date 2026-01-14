@@ -87,16 +87,73 @@ def compute_metrics(record: ExperimentRecord, lf: pl.LazyFrame) -> Dict[str, Any
             metrics[f"{sensor.name}_{axis}_skew"] = skew_val
             metrics[f"{sensor.name}_{axis}_kurtosis"] = kurt_val
 
+    # Compute contact force distribution metrics
+    if body_contact_sensors:
+        # Calculate force norms for each segment
+        norm_cols = []
+        for sensor in body_contact_sensors:
+            x_col, y_col, z_col = sensor.columns
+            norm_col = f"{sensor.name}_norm"
+            lf = lf.with_columns(
+                (pl.col(x_col).pow(2) + pl.col(y_col).pow(2) + pl.col(z_col).pow(2)).sqrt().alias(norm_col)
+            )
+            norm_cols.append(norm_col)
+        
+        # Total contact force per timestep
+        total_force_col = "total_contact_force"
+        lf = lf.with_columns(pl.sum_horizontal(norm_cols).alias(total_force_col))
+        
+        # Relative shares per segment, avoiding division by zero
+        share_cols = []
+        for sensor, norm_col in zip(body_contact_sensors, norm_cols):
+            share_col = f"{sensor.name}_share"
+            lf = lf.with_columns(
+                pl.when(pl.col(total_force_col) > 0)
+                .then(pl.col(norm_col) / pl.col(total_force_col))
+                .otherwise(0.0)
+                .alias(share_col)
+            )
+            share_cols.append(share_col)
+        
+        # Aggregate metrics: mean and std of shares, max of norms and shares
+        for sensor, norm_col, share_col in zip(body_contact_sensors, norm_cols, share_cols):
+            mean_share = lf.select(pl.col(share_col).mean()).collect().item()
+            std_share = lf.select(pl.col(share_col).std()).collect().item()
+            max_norm = lf.select(pl.col(norm_col).max()).collect().item()
+            max_share = lf.select(pl.col(share_col).max()).collect().item()
+            
+            metrics[f"{sensor.name}_contact_share_mean"] = mean_share
+            metrics[f"{sensor.name}_contact_share_std"] = std_share
+            metrics[f"{sensor.name}_contact_force_max"] = max_norm
+            metrics[f"{sensor.name}_contact_share_max"] = max_share
+        
+        # Find segment with highest peak force and highest peak share
+        if body_contact_sensors:
+            max_force_sensor = max(body_contact_sensors, key=lambda s: metrics[f"{s.name}_contact_force_max"])
+            max_share_sensor = max(body_contact_sensors, key=lambda s: metrics[f"{s.name}_contact_share_max"])
+            
+            metrics["max_contact_force_segment"] = max_force_sensor.name
+            metrics["max_contact_force_value"] = metrics[f"{max_force_sensor.name}_contact_force_max"]
+            metrics["max_contact_share_segment"] = max_share_sensor.name
+            metrics["max_contact_share_value"] = metrics[f"{max_share_sensor.name}_contact_share_max"]
+
     return metrics
 
 def aggregate_experiments(base_dir: str = "build") -> pl.DataFrame:
     """
     Aggregates data from all experiments into a summary DataFrame.
+    Ensures unique run_ids by skipping duplicates.
     """
     run_ids = crawl_experiments(base_dir)
+    print(f"Found {len(run_ids)} experiment directories")
     summary_data = []
+    processed_run_ids = set()
 
     for run_id in run_ids:
+        if run_id in processed_run_ids:
+            print(f"Warning: Skipping duplicate run_id {run_id}")
+            continue
+        print(f"Processing run_id: {run_id}")
         try:
             record, lf = load_experiment(run_id, base_dir)
             metrics = compute_metrics(record, lf)
@@ -112,11 +169,13 @@ def aggregate_experiments(base_dir: str = "build") -> pl.DataFrame:
             }
             params.update(metrics)
             summary_data.append(params)
+            processed_run_ids.add(run_id)
 
         except Exception as e:
             print(f"Warning: Skipping experiment {run_id} due to error: {e}")
             continue
 
+    print(f"Successfully processed {len(summary_data)} unique experiments")
     return pl.DataFrame(summary_data)
 
 def save_summary(df: pl.DataFrame, base_dir: str = "build"):
@@ -190,11 +249,105 @@ def plot_trends(df: pl.DataFrame, x_param: str = "L_target", y_metrics: List[str
                 ax.text(row[x_param], row['Value'], row['run_id'], fontsize=6, ha='right')
         plt.show()
 
+def plot_force_distribution(run_id: str, base_dir: str = "build", figsize: tuple = (10, 6), save_path: Optional[str] = None):
+    """
+    Plots the mean contact force distribution across segments for a given run.
+    Shows the average share of total contact force per segment.
+    """
+    df = load_summary_parquet(base_dir)
+    run_data = df.filter(pl.col("run_id") == run_id)
+    if run_data.is_empty():
+        raise ValueError(f"Run {run_id} not found in summary.")
+    
+    # Extract share_mean columns
+    share_cols = [col for col in df.columns if col.endswith("_contact_share_mean")]
+    if not share_cols:
+        print("No contact share metrics found.")
+        return
+    
+    segments = [col.replace("_contact_share_mean", "") for col in share_cols]
+    shares = [run_data.select(pl.col(col)).item() for col in share_cols]
+    
+    # Filter out None and zero shares for readability
+    filtered = [(seg, sh) for seg, sh in zip(segments, shares) if sh is not None and sh > 0.001]
+    if not filtered:
+        print("No significant contact shares found.")
+        return
+    
+    segments, shares = zip(*filtered)
+    
+    plt.figure(figsize=figsize)
+    plt.bar(segments, shares)
+    plt.xlabel("Segment")
+    plt.ylabel("Mean Contact Force Share")
+    plt.title(f"Mean Contact Force Distribution - {run_id}")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
+def plot_force_peak_usage(run_id: str, metric: str = "force", base_dir: str = "build", figsize: tuple = (10, 6), save_path: Optional[str] = None):
+    """
+    Plots the peak contact force usage across segments for a given run.
+    metric: "force" for max norms, "share" for max shares.
+    """
+    df = load_summary_parquet(base_dir)
+    run_data = df.filter(pl.col("run_id") == run_id)
+    if run_data.is_empty():
+        raise ValueError(f"Run {run_id} not found in summary.")
+    
+    suffix = "_contact_force_max" if metric == "force" else "_contact_share_max"
+    peak_cols = [col for col in df.columns if col.endswith(suffix)]
+    if not peak_cols:
+        print(f"No {metric} peak metrics found.")
+        return
+    
+    segments = [col.replace(suffix, "") for col in peak_cols]
+    peaks = [run_data.select(pl.col(col)).item() for col in peak_cols]
+    
+    # Filter out None and zero peaks
+    filtered = [(seg, pk) for seg, pk in zip(segments, peaks) if pk is not None and pk > 0.001]
+    if not filtered:
+        print("No significant peaks found.")
+        return
+    
+    segments, peaks = zip(*filtered)
+    
+    plt.figure(figsize=figsize)
+    bars = plt.bar(segments, peaks)
+    plt.xlabel("Segment")
+    plt.ylabel(f"Max Contact {metric.title()}")
+    plt.title(f"Peak Contact {metric.title()} Usage - {run_id}")
+    plt.xticks(rotation=45, ha='right')
+    
+    # Highlight the max segment
+    max_idx = peaks.index(max(peaks))
+    bars[max_idx].set_color('red')
+    plt.text(max_idx, peaks[max_idx], f"Max: {segments[max_idx]}", ha='center', va='bottom')
+    
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
 def run_meta_analysis(base_dir: str = "build", plot: bool = False, y_metrics: List[str] = None):
     """
     Runs the full meta-analysis: aggregate, save, and optionally plot.
+    Checks for duplicate run_ids after aggregation.
     """
     df = aggregate_experiments(base_dir)
+    
+    # Check for duplicate run_ids
+    run_id_counts = df.group_by("run_id").len()
+    duplicates = run_id_counts.filter(pl.col("len") > 1)
+    if not duplicates.is_empty():
+        print("Error: Found duplicate run_ids in summary:")
+        print(duplicates)
+        raise ValueError("Duplicate run_ids detected. Please ensure unique run_ids.")
+    
     save_summary(df, base_dir)
     if plot:
         if y_metrics is None:

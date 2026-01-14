@@ -201,6 +201,8 @@ def plot_time_series(run_ids: Union[str, List[str], None] = None, sensors: List[
             for sensor in sensors:
                 for axis in axes:
                     col = f"{sensor}_{axis}"
+                    if col not in df.columns:
+                        col = sensor
                     if col in df.columns:
                         sns.lineplot(data=df_pd, x="time_s", y=col, hue="experiment_id", label=f"{sensor} {axis}")
         else:
@@ -211,6 +213,8 @@ def plot_time_series(run_ids: Union[str, List[str], None] = None, sensors: List[
                 for sensor in sensors:
                     for axis in axes:
                         col = f"{sensor}_{axis}"
+                        if col not in df.columns:
+                            col = sensor
                         if col in df.columns:
                             plt.plot(df_pd_run["time_s"], df_pd_run[col], label=f"{run_id} {sensor} {axis}")
         
@@ -241,6 +245,8 @@ def plot_time_series(run_ids: Union[str, List[str], None] = None, sensors: List[
         for sensor in sensors:
             for axis in axes:
                 col = f"{sensor}_{axis}_{metric}"
+                if col not in df.columns:
+                    col = f"{sensor}_{metric}"
                 if col in df.columns:
                     if hue_by == "run":
                         sns.barplot(data=df_pd, x="experiment_id", y=col, hue="experiment_id")
@@ -340,6 +346,8 @@ def plot_distribution(run_ids: Union[str, List[str], Literal["all"]], sensor: st
     df = load_multiple_summaries_parquet(run_ids, base_dir)
     col = f"{sensor}_{axis}_{metric}"
     if col not in df.columns:
+        col = f"{sensor}_{metric}"
+    if col not in df.columns:
         raise ValueError(f"Column {col} not found.")
     
     df_pd = df.to_pandas()
@@ -406,6 +414,8 @@ def plot_comparison(run_ids: Union[str, List[str], Literal["all"], None] = None,
     
     df = load_multiple_summaries_parquet(run_ids, base_dir)
     col = f"{sensor}_{axis}_{metric}"
+    if col not in df.columns:
+        col = f"{sensor}_{metric}"
     if col not in df.columns:
         raise ValueError(f"Column {col} not found in summary data.")
     

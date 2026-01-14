@@ -13,7 +13,7 @@
                 0.1
             ],
             "size": [
-                0.02,
+                0.04,
                 0.1,
                 0.0
             ],
@@ -23,7 +23,7 @@
                 0
             ]
         },
-        "id": "Run_001_Ramped_Cyl_Sz0.02-0.10-0.00_L0.30_T2.0",
+        "id": "Run_001_Ramped_Cyl_Sz0.04-0.10-0.00_L0.30_T2.0",
         "controller_info_str": "ramped_controller",
         "geom_func_info_str": "setup_cylinder"
     },
@@ -69,7 +69,7 @@
                 0.1
             ],
             "size": [
-                0.02,
+                0.04,
                 0.1,
                 0.0
             ],
@@ -79,7 +79,7 @@
                 0
             ]
         },
-        "id": "Run_003_Ramped_Cyl_Sz0.02-0.10-0.00_L0.30_T2.0",
+        "id": "Run_003_Ramped_Cyl_Sz0.04-0.10-0.00_L0.30_T2.0",
         "controller_info_str": "ramped_controller",
         "geom_func_info_str": "setup_cylinder"
     },
@@ -125,7 +125,7 @@
                 0.1
             ],
             "size": [
-                0.02,
+                0.04,
                 0.1,
                 0.0
             ],
@@ -135,7 +135,7 @@
                 0
             ]
         },
-        "id": "Run_005_Ramped_Cyl_Sz0.02-0.10-0.00_L0.35_T2.0",
+        "id": "Run_005_Ramped_Cyl_Sz0.04-0.10-0.00_L0.35_T2.0",
         "controller_info_str": "ramped_controller",
         "geom_func_info_str": "setup_cylinder"
     },
@@ -181,7 +181,7 @@
                 0.1
             ],
             "size": [
-                0.02,
+                0.04,
                 0.1,
                 0.0
             ],
@@ -191,7 +191,7 @@
                 0
             ]
         },
-        "id": "Run_007_Ramped_Cyl_Sz0.02-0.10-0.00_L0.35_T2.0",
+        "id": "Run_007_Ramped_Cyl_Sz0.04-0.10-0.00_L0.35_T2.0",
         "controller_info_str": "ramped_controller",
         "geom_func_info_str": "setup_cylinder"
     },
@@ -237,7 +237,7 @@
                 0.1
             ],
             "size": [
-                0.02,
+                0.04,
                 0.1,
                 0.0
             ],
@@ -247,7 +247,7 @@
                 0
             ]
         },
-        "id": "Run_009_Ramped_Cyl_Sz0.02-0.10-0.00_L0.40_T2.0",
+        "id": "Run_009_Ramped_Cyl_Sz0.04-0.10-0.00_L0.40_T2.0",
         "controller_info_str": "ramped_controller",
         "geom_func_info_str": "setup_cylinder"
     },
@@ -293,7 +293,7 @@
                 0.1
             ],
             "size": [
-                0.02,
+                0.04,
                 0.1,
                 0.0
             ],
@@ -303,7 +303,7 @@
                 0
             ]
         },
-        "id": "Run_011_Ramped_Cyl_Sz0.02-0.10-0.00_L0.40_T2.0",
+        "id": "Run_011_Ramped_Cyl_Sz0.04-0.10-0.00_L0.40_T2.0",
         "controller_info_str": "ramped_controller",
         "geom_func_info_str": "setup_cylinder"
     },

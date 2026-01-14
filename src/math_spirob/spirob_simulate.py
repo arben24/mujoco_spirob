@@ -7,6 +7,7 @@ import math
 import itertools
 import json
 import time
+import imageio
 
 # Definieren des Controller-Interface (Callback-Signatur)
 # Ein Controller muss mj.MjModel, mj.MjData, die aktuelle Zeit (float) 
@@ -203,7 +204,12 @@ def run_simulation_and_get_dataframe(
     controller: ControllerFunc,
     enable_viewer: bool,
     boost_viewer: float,
-    include_geom_pos: bool = False
+    include_geom_pos: bool = False,
+    record_video: bool = False,
+    video_fps: int = 30,
+    video_resolution: tuple[int, int] = (640, 480),
+    video_path: str = None,
+    video_flip_vertical: bool = True
 ) -> pl.DataFrame:
     """
     Führt die Simulation aus, sammelt Daten und konvertiert sie in ein Polars DataFrame.
@@ -213,7 +219,89 @@ def run_simulation_and_get_dataframe(
     sensor_dicts, sensor_metadata, geom_metadata, body_metadata, time_array, num_steps = \
         initialize_data_structures(model, sim_time)
         
-    # --- 1. Simulation ---
+    # --- Video Rendering Initialisierung ---
+    frames = []
+    width, height = video_resolution if record_video else (640, 480)
+    mjv_scene = None
+    mjv_camera = None
+    mjv_option = None
+    mjr_context = None
+    rgb_buffer = None
+    render_every = 1
+    render_counter = 0
+    if record_video:
+        try:
+            # Setze OpenGL-Plattform für headless Rendering
+            import os
+            os.environ['PYOPENGL_PLATFORM'] = 'egl'
+            
+            # Initialisiere EGL-Kontext für headless Rendering
+            import mujoco.egl
+            width, height = video_resolution
+            egl_context = mujoco.egl.GLContext(width, height)
+            egl_context.make_current()
+            
+            # Offscreen Rendering Setup
+            mjv_scene = mj.MjvScene(model, maxgeom=1000)
+            mjv_camera = mj.MjvCamera()
+            mjv_option = mj.MjvOption()
+            
+            # Kamera einstellen: Feste globale Kamera
+            mjv_camera.type = mj.mjtCamera.mjCAMERA_FREE
+            mjv_camera.lookat = np.array([0.0, 0.0, 0.1])  # Blickpunkt
+            mjv_camera.distance = 1.0
+            mjv_camera.azimuth = 90.0
+            mjv_camera.elevation = -20.0
+            
+            # Adjust fovy to maintain consistent horizontal FOV across different aspect ratios
+            aspect = width / height
+            aspect_ref = 4/3  # Reference aspect ratio (640x480)
+            fovy_ref = 45.0   # Reference fovy for reference aspect
+            hfov_ref_rad = 2 * math.atan(math.tan(math.radians(fovy_ref)/2) * aspect_ref)
+            fovy_rad = 2 * math.atan(math.tan(hfov_ref_rad/2) / aspect)
+            try:
+                mjv_camera.fovy = math.degrees(fovy_rad)
+            except AttributeError:
+                print(f"Warnung: Kamera FOV Anpassung nicht unterstützt (fovy nicht verfügbar), verwende Standard FOV")
+            
+            # Context für offscreen rendering
+            mjr_context = mj.MjrContext(model, mj.mjtFontScale.mjFONTSCALE_150)
+            
+            # Setze Buffer für offscreen rendering
+            mj.mjr_setBuffer(mj.mjtFramebuffer.mjFB_OFFSCREEN, mjr_context)
+            
+            # Resize offscreen buffer to match video resolution
+            mj.mjr_resizeOffscreen(width, height, mjr_context)
+            
+            # Verify offscreen buffer size
+            off_width = mjr_context.offWidth
+            off_height = mjr_context.offHeight
+            print(f"  Offscreen buffer size: {off_width}x{off_height}")
+            if off_width < width or off_height < height:
+                print(f"Warnung: Offscreen buffer ({off_width}x{off_height}) kleiner als Video-Auflösung ({width}x{height})")
+            
+            # Framebuffer für RGB
+            rgb_buffer = np.zeros((height, width, 3), dtype=np.uint8)
+            
+            # Berechne Render-Intervall für korrekte FPS
+            # render_every = max(1, round(1.0 / (video_fps * dt)))
+            # Dies stellt sicher, dass Video-Länge ≈ Simulationszeit
+            dt = model.opt.timestep
+            render_every = max(1, int(round(1.0 / (video_fps * dt))))
+            
+            # Debug logging
+            print(f"Video-Aufzeichnung initialisiert: {width}x{height} @ {video_fps} FPS (render every {render_every} steps)")
+            print(f"  aspect: {aspect:.3f}")
+            try:
+                print(f"  fovy: {mjv_camera.fovy:.1f}°")
+            except AttributeError:
+                print("  fovy: nicht verfügbar (Standard verwendet)")
+        except ImportError:
+            print("Warnung: mujoco.egl nicht verfügbar. Video-Rendering im Headless-Modus nicht unterstützt.")
+            record_video = False
+        except Exception as e:
+            print(f"Warnung: Video-Rendering konnte nicht initialisiert werden: {e}")
+            record_video = False
     
     step_index = 0
     
@@ -260,6 +348,21 @@ def run_simulation_and_get_dataframe(
                 # GUI aktualisieren
                 viewer.sync()
 
+                # --- Video Frame aufzeichnen ---
+                if record_video:
+                    render_counter += 1
+                    if render_counter % render_every == 0:
+                        try:
+                            mj.mjv_updateScene(model, data, mjv_option, None, mjv_camera, mj.mjtCatBit.mjCAT_ALL, mjv_scene)
+                            mj.mjr_render(mj.MjrRect(0, 0, width, height), mjv_scene, mjr_context)
+                            mj.mjr_readPixels(rgb_buffer, None, mj.MjrRect(0, 0, width, height), mjr_context)
+                            frame = rgb_buffer.copy()
+                            if video_flip_vertical:
+                                frame = np.flipud(frame)  # MuJoCo rendert bottom-up, Videos brauchen top-down
+                            frames.append(frame)
+                        except Exception as e:
+                            print(f"Warnung: Frame-Aufzeichnung fehlgeschlagen: {e}")
+
                 # --- Zeitsteuerung mit Boost ---
                 # Wir teilen den physikalischen Zeitschritt durch den Boost-Faktor
                 target_step_duration = model.opt.timestep / boost_viewer
@@ -293,6 +396,21 @@ def run_simulation_and_get_dataframe(
             for meta in body_metadata:
                 meta['array'][step_index] = body_forces[meta['id']]
 
+            # --- Video Frame aufzeichnen ---
+            if record_video:
+                render_counter += 1
+                if render_counter % render_every == 0:
+                    try:
+                        mj.mjv_updateScene(model, data, mjv_option, None, mjv_camera, mj.mjtCatBit.mjCAT_ALL, mjv_scene)
+                        mj.mjr_render(mj.MjrRect(0, 0, width, height), mjv_scene, mjr_context)
+                        mj.mjr_readPixels(rgb_buffer, None, mj.MjrRect(0, 0, width, height), mjr_context)
+                        frame = rgb_buffer.copy()
+                        if video_flip_vertical:
+                            frame = np.flipud(frame)  # MuJoCo rendert bottom-up, Videos brauchen top-down
+                        frames.append(frame)
+                    except Exception as e:
+                        print(f"Warnung: Frame-Aufzeichnung fehlgeschlagen: {e}")
+
     final_length = step_index + 1
     time_series_data = time_array[:final_length] 
     
@@ -317,6 +435,21 @@ def run_simulation_and_get_dataframe(
         time_series_data, 
         final_length
     )
+    
+    # --- Video speichern ---
+    if record_video and frames and video_path:
+        try:
+            # Stelle sicher, dass das Verzeichnis existiert
+            import os
+            os.makedirs(os.path.dirname(video_path), exist_ok=True)
+            
+            print(f"Speichere Video nach {video_path}...")
+            with imageio.get_writer(video_path, fps=video_fps, macro_block_size=None) as writer:
+                for frame in frames:
+                    writer.append_data(frame)
+            print(f"Video erfolgreich gespeichert: {video_path}")
+        except Exception as e:
+            print(f"Fehler beim Speichern des Videos: {e}")
     
     return final_wide_df
 
@@ -650,3 +783,7 @@ def save_configs_to_json(
     except Exception as e:
         print(f"\n❌ FEHLER beim Exportieren nach JSON ({filename}): {e}")
         print("Stellen Sie sicher, dass keine nicht-serialisierbaren Typen (z.B. komplexe Objekte) übrig geblieben sind.")
+
+def get_video_path(run_id: str, base_dir: str = "build/experiments") -> str:
+    """Erzeugt den Pfad für das Video basierend auf run_id."""
+    return f"{base_dir}/{run_id}/video.mp4"
