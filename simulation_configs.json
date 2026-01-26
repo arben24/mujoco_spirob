@@ -5,7 +5,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -33,7 +33,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -61,7 +61,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -89,7 +89,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -117,7 +117,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -145,7 +145,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -173,7 +173,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -201,7 +201,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -229,7 +229,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -257,7 +257,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -285,7 +285,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,
@@ -313,7 +313,7 @@
         "sim_time": 2.0,
         "tip_d": 0.01,
         "Delta_theta_deg": 30,
-        "include_geom_pos": false,
+        "include_geom_pos": true,
         "geom_kwargs": {
             "pos": [
                 0.1,

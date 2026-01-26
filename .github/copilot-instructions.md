@@ -17,11 +17,13 @@ This codebase implements mathematical and simulation tools for logarithmic spira
 - **Run Apps**: `uv run apps/<script>.py` (e.g., `uv run apps/generate_2d_spirob.py`)
 - **Test**: `uv run pytest` (tests in `tests/`, focus on math functions and data schemas)
 - **Docs**: `cd docs && uv run make html` (Sphinx docs in `docs/_build/html/`)
+- **GUI Analysis**: `uv run apps/spirob_plot_gui.py` for interactive plotting
+- **Video Recording**: `PYOPENGL_PLATFORM=egl uv run apps/spirob_metrics.py --record-video` for simulation videos
 
 ## Coding Conventions
 - **Imports**: Absolute imports within package (e.g., `from .math_spirob import rho`)
 - **Data Handling**: Polars for columnar data, NumPy for math arrays, Pydantic for validation
-- **Sensor Naming**: Follow `DataGroup` enum (ACC, GYRO, TENDON_FRC, etc.) with dimension-aware columns
+- **Sensor Naming**: Follow `DataGroup` enum (ACC, GYRO, TENDON_FRC, etc.) with dimension-aware columns like `acc_0_X`, `body_spiral_0_contact_force_Y`
 - **Error Handling**: Raise descriptive exceptions (e.g., `FileNotFoundError` for missing experiment dirs)
 - **Plotting**: Matplotlib/Seaborn in analysis scripts, save to `build/` directory
 

@@ -8,6 +8,7 @@ import itertools
 import json
 import time
 import imageio
+from .simple_segment_estimator import SimpleSegmentEstimator
 
 # Definieren des Controller-Interface (Callback-Signatur)
 # Ein Controller muss mj.MjModel, mj.MjData, die aktuelle Zeit (float) 
@@ -95,11 +96,29 @@ def create_single_polars_dataframe(
             current_D = values_array.shape[1] if values_array.ndim == 2 else 1
             
             if current_D == 3:
-                # 3D: Benennung: sensorname_X/Y/Z
+                # 3D: Benennung: sensorname_x/y/z für geom_pos und pos_estimate, sonst _X/Y/Z
                 columns_prefix = sensor_name
-                all_columns.append(pl.Series(f"{columns_prefix}_X", values_array[:, 0]))
-                all_columns.append(pl.Series(f"{columns_prefix}_Y", values_array[:, 1]))
-                all_columns.append(pl.Series(f"{columns_prefix}_Z", values_array[:, 2]))
+                if group_prefix in ["geom_pos", "pos_estimate"]:
+                    suffix = ["_x", "_y", "_z"]
+                else:
+                    suffix = ["_X", "_Y", "_Z"]
+                all_columns.append(pl.Series(f"{columns_prefix}{suffix[0]}", values_array[:, 0]))
+                all_columns.append(pl.Series(f"{columns_prefix}{suffix[1]}", values_array[:, 1]))
+                all_columns.append(pl.Series(f"{columns_prefix}{suffix[2]}", values_array[:, 2]))
+            
+            elif current_D == 4:
+                # 4D: Für Quaternions: sensorname_w/x/y/z, für Velocity: x/y/z/norm
+                columns_prefix = sensor_name
+                if group_prefix == "quat_estimate":
+                    suffix = ["_w", "_x", "_y", "_z"]
+                elif group_prefix == "vel_estimate":
+                    suffix = ["_x", "_y", "_z", "_norm"]
+                else:
+                    suffix = ["_0", "_1", "_2", "_3"]
+                all_columns.append(pl.Series(f"{columns_prefix}{suffix[0]}", values_array[:, 0]))
+                all_columns.append(pl.Series(f"{columns_prefix}{suffix[1]}", values_array[:, 1]))
+                all_columns.append(pl.Series(f"{columns_prefix}{suffix[2]}", values_array[:, 2]))
+                all_columns.append(pl.Series(f"{columns_prefix}{suffix[3]}", values_array[:, 3]))
             
             elif current_D == 1:
                 # 1D: Benennung: sensorname
@@ -123,6 +142,7 @@ def initialize_data_structures(model: mj.MjModel, sim_time: float) -> Tuple[Dict
     acc_over_time, gyro_over_time, tendon_frc_over_time, tendon_pos_over_time, \
     tendon_vel_over_time, joint_pos_over_time, joint_vel_over_time = {}, {}, {}, {}, {}, {}, {}
     positions_over_time = {} # Für Geoms
+    quaternions_over_time = {} # Für Geom Quaternions
     body_contact_force_over_time = {} # Für Body-Kontaktkräfte
     
     SENSOR_CONFIG = {
@@ -171,17 +191,20 @@ def initialize_data_structures(model: mj.MjModel, sim_time: float) -> Tuple[Dict
     geom_metadata = []
     i = 0
     while True:
-        name = f"g_{i}"
+        name = f"geom_{i}"
         geom_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_GEOM, name)
         if geom_id == -1:
             break
         
         pos_array = np.zeros((num_steps, 3), dtype=np.float64)
+        quat_array = np.zeros((num_steps, 4), dtype=np.float64)
         positions_over_time[name] = pos_array
+        quaternions_over_time[name] = quat_array
         
         geom_metadata.append({
             'name': name,
-            'array': pos_array,
+            'pos_array': pos_array,
+            'quat_array': quat_array,
             'id': geom_id
         })
         i += 1
@@ -192,10 +215,63 @@ def initialize_data_structures(model: mj.MjModel, sim_time: float) -> Tuple[Dict
         "acc": acc_over_time, "gyro": gyro_over_time, "tendon_frc": tendon_frc_over_time, 
         "tendon_pos": tendon_pos_over_time, "tendon_vel": tendon_vel_over_time, 
         "joint_pos": joint_pos_over_time, "joint_vel": joint_vel_over_time, 
-        "geom_pos": positions_over_time, "bodycontactfrc": body_contact_force_over_time
+        "geom_pos": positions_over_time, "geom_quat": quaternions_over_time, "bodycontactfrc": body_contact_force_over_time
     }
 
     return sensor_dicts, sensor_metadata, geom_metadata, body_metadata, time_array, num_steps
+
+def create_single_polars_dataframe(
+    sensor_groups_config: List[Tuple[str, Dict[str, np.ndarray]]], 
+    time_series_data: np.ndarray, 
+    final_length: int
+) -> pl.DataFrame:
+    """
+    Creates a single Polars DataFrame from sensor groups config.
+    """
+    df_dict = {"time_s": time_series_data[:final_length]}
+    
+    for group_name, sensor_dict in sensor_groups_config:
+        for sensor_name, array in sensor_dict.items():
+            array = array[:final_length]
+            if group_name == "bodycontactfrc":
+                df_dict[f"{sensor_name}_contact_force_X"] = array[:, 0]
+                df_dict[f"{sensor_name}_contact_force_Y"] = array[:, 1]
+                df_dict[f"{sensor_name}_contact_force_Z"] = array[:, 2]
+            elif group_name in ["geom_pos", "geom_quat"]:
+                # Special handling for geom
+                geom_id = sensor_name.split('_')[-1]
+                if group_name == "geom_pos":
+                    base = f"geom_pos_{geom_id}"
+                    df_dict[f"{base}_x"] = array[:, 0]
+                    df_dict[f"{base}_y"] = array[:, 1]
+                    df_dict[f"{base}_z"] = array[:, 2]
+                elif group_name == "geom_quat":
+                    base = f"geom_pos_{geom_id}"
+                    df_dict[f"{base}_quat_w"] = array[:, 0]
+                    df_dict[f"{base}_quat_x"] = array[:, 1]
+                    df_dict[f"{base}_quat_y"] = array[:, 2]
+                    df_dict[f"{base}_quat_z"] = array[:, 3]
+            elif array.ndim == 1:
+                # 1D sensor
+                df_dict[sensor_name] = array
+            elif array.ndim == 2:
+                if array.shape[1] == 3:
+                    # 3D vector
+                    df_dict[f"{sensor_name}_X"] = array[:, 0]
+                    df_dict[f"{sensor_name}_Y"] = array[:, 1]
+                    df_dict[f"{sensor_name}_Z"] = array[:, 2]
+                elif array.shape[1] == 4:
+                    # Quaternion
+                    df_dict[f"{sensor_name}_w"] = array[:, 0]
+                    df_dict[f"{sensor_name}_x"] = array[:, 1]
+                    df_dict[f"{sensor_name}_y"] = array[:, 2]
+                    df_dict[f"{sensor_name}_z"] = array[:, 3]
+                else:
+                    # Other dimensions
+                    for i in range(array.shape[1]):
+                        df_dict[f"{sensor_name}_{i}"] = array[:, i]
+    
+    return pl.DataFrame(df_dict)
 
 def run_simulation_and_get_dataframe(
     model: mj.MjModel, 
@@ -209,7 +285,9 @@ def run_simulation_and_get_dataframe(
     video_fps: int = 30,
     video_resolution: tuple[int, int] = (640, 480),
     video_path: str = None,
-    video_flip_vertical: bool = True
+    video_flip_vertical: bool = True,
+    enable_position_estimation: bool = False,
+    position_estimator_segments: list[int] = None
 ) -> pl.DataFrame:
     """
     Führt die Simulation aus, sammelt Daten und konvertiert sie in ein Polars DataFrame.
@@ -218,6 +296,34 @@ def run_simulation_and_get_dataframe(
     # Initialisiere alle Speicherstrukturen
     sensor_dicts, sensor_metadata, geom_metadata, body_metadata, time_array, num_steps = \
         initialize_data_structures(model, sim_time)
+        
+    # --- Position Estimation Initialisierung ---
+    estimator = None
+    pos_estimate_arrays = {}
+    quat_estimate_arrays = {}
+    vel_estimate_arrays = {}
+    if enable_position_estimation and position_estimator_segments:
+        # Hole Initialwerte aus MuJoCo
+        initial_positions = {}
+        initial_orientations = {}
+        for seg_id in position_estimator_segments:
+            geom_name = f'geom_{seg_id}'
+            geom_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_GEOM, geom_name)
+            if geom_id >= 0:
+                initial_positions[seg_id] = data.geom_xpos[geom_id].tolist()
+                initial_orientations[seg_id] = data.geom_xquat[geom_id].tolist()
+        
+        estimator = SimpleSegmentEstimator(
+            segment_ids=position_estimator_segments,
+            initial_positions=initial_positions,
+            initial_orientations=initial_orientations
+        )
+        
+        # Initialisiere Arrays für Schätzungen
+        for seg_id in position_estimator_segments:
+            pos_estimate_arrays[seg_id] = np.zeros((num_steps, 3))
+            quat_estimate_arrays[seg_id] = np.zeros((num_steps, 4))
+            vel_estimate_arrays[seg_id] = np.zeros((num_steps, 4))  # x,y,z,norm
         
     # --- Video Rendering Initialisierung ---
     frames = []
@@ -330,6 +436,35 @@ def run_simulation_and_get_dataframe(
                 # --- Simulationsschritt ---
                 mj.mj_step(model, data)
                 
+                # --- Position Estimation ---
+                if estimator:
+                    dt = model.opt.timestep
+                    sensor_data = {}
+                    for seg_id in position_estimator_segments:
+                        acc_cols = [f'acc_{seg_id}_X', f'acc_{seg_id}_Y', f'acc_{seg_id}_Z']
+                        gyro_cols = [f'gyro_{seg_id}_X', f'gyro_{seg_id}_Y', f'gyro_{seg_id}_Z']
+                        acc_data = []
+                        gyro_data = []
+                        for col in acc_cols:
+                            sensor_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_SENSOR, col)
+                            if sensor_id >= 0:
+                                acc_data.append(data.sensor(sensor_id).data[0])
+                        for col in gyro_cols:
+                            sensor_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_SENSOR, col)
+                            if sensor_id >= 0:
+                                gyro_data.append(data.sensor(sensor_id).data[0])
+                        if acc_data and gyro_data:
+                            sensor_data[seg_id] = {'acc': acc_data, 'gyro': gyro_data}
+                    if sensor_data:
+                        estimator.update_batch(sensor_data, dt)
+                        states = estimator.get_all_states()
+                        for seg_id in position_estimator_segments:
+                            if seg_id in states:
+                                state = states[seg_id]
+                                pos_estimate_arrays[seg_id][step_index] = state.position
+                                quat_estimate_arrays[seg_id][step_index] = state.orientation
+                                vel_estimate_arrays[seg_id][step_index] = [state.velocity[0], state.velocity[1], state.velocity[2], np.linalg.norm(state.velocity)]
+                
                 # --- Datenspeicherung ---
                 # Sicherheitscheck, damit wir nicht über das Array-Ende schreiben
                 if step_index < len(time_array):
@@ -338,7 +473,8 @@ def run_simulation_and_get_dataframe(
                         meta['array'][step_index] = data.sensor(meta['index']).data
                     if include_geom_pos:
                         for meta in geom_metadata:
-                            meta['array'][step_index] = data.geom_xpos[meta['id']]
+                            meta['pos_array'][step_index] = data.geom_xpos[meta['id']]
+                            meta['quat_array'][step_index] = data.geom_xquat[meta['id']]
                     
                     # Sammle Body-Kontaktkräfte
                     body_forces = extract_body_contact_forces(model, data)
@@ -383,13 +519,43 @@ def run_simulation_and_get_dataframe(
             # --- Simulationsschritt ---
             mj.mj_step(model, data)
             
+            # --- Position Estimation ---
+            if estimator:
+                dt = model.opt.timestep
+                sensor_data = {}
+                for seg_id in position_estimator_segments:
+                    acc_cols = [f'acc_{seg_id}_X', f'acc_{seg_id}_Y', f'acc_{seg_id}_Z']
+                    gyro_cols = [f'gyro_{seg_id}_X', f'gyro_{seg_id}_Y', f'gyro_{seg_id}_Z']
+                    acc_data = []
+                    gyro_data = []
+                    for col in acc_cols:
+                        sensor_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_SENSOR, col)
+                        if sensor_id >= 0:
+                            acc_data.append(data.sensor(sensor_id).data[0])
+                    for col in gyro_cols:
+                        sensor_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_SENSOR, col)
+                        if sensor_id >= 0:
+                            gyro_data.append(data.sensor(sensor_id).data[0])
+                    if acc_data and gyro_data:
+                        sensor_data[seg_id] = {'acc': acc_data, 'gyro': gyro_data}
+                if sensor_data:
+                    estimator.update_batch(sensor_data, dt)
+                    states = estimator.get_all_states()
+                    for seg_id in position_estimator_segments:
+                        if seg_id in states:
+                            state = states[seg_id]
+                            pos_estimate_arrays[seg_id][step_index] = state.position
+                            quat_estimate_arrays[seg_id][step_index] = state.orientation
+                            vel_estimate_arrays[seg_id][step_index] = [state.velocity[0], state.velocity[1], state.velocity[2], np.linalg.norm(state.velocity)]
+            
             # --- Datenspeicherung ---
             time_array[step_index] = data.time
             for meta in sensor_metadata:
                 meta['array'][step_index] = data.sensor(meta['index']).data
             if include_geom_pos:
                 for meta in geom_metadata:
-                    meta['array'][step_index] = data.geom_xpos[meta['id']]
+                    meta['pos_array'][step_index] = data.geom_xpos[meta['id']]
+                    meta['quat_array'][step_index] = data.geom_xquat[meta['id']]
             
             # Sammle Body-Kontaktkräfte
             body_forces = extract_body_contact_forces(model, data)
@@ -429,6 +595,19 @@ def run_simulation_and_get_dataframe(
     
     if include_geom_pos:
          SENSOR_GROUPS_CONFIG.append(("geom_pos", sensor_dicts["geom_pos"]))
+    
+    # Add position estimates
+    if enable_position_estimation and position_estimator_segments:
+        pos_estimate_dict = {}
+        quat_estimate_dict = {}
+        vel_estimate_dict = {}
+        for seg_id in position_estimator_segments:
+            pos_estimate_dict[f'pos_estimate_{seg_id}'] = pos_estimate_arrays[seg_id][:final_length]
+            quat_estimate_dict[f'quat_estimate_{seg_id}'] = quat_estimate_arrays[seg_id][:final_length]
+            vel_estimate_dict[f'vel_estimate_{seg_id}'] = vel_estimate_arrays[seg_id][:final_length]
+        SENSOR_GROUPS_CONFIG.append(("pos_estimate", pos_estimate_dict))
+        SENSOR_GROUPS_CONFIG.append(("quat_estimate", quat_estimate_dict))
+        SENSOR_GROUPS_CONFIG.append(("vel_estimate", vel_estimate_dict))
 
     final_wide_df = create_single_polars_dataframe(
         SENSOR_GROUPS_CONFIG, 

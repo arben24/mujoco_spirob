@@ -171,5 +171,11 @@ To start the analyse which calulates the different metrics run
 uv run ./apps/spirob_analyse.py
 ```
 
+```bash
+uv run ./apps/spirob_analyse.py --enable-position-estimation
+```
+
+
+
 
 

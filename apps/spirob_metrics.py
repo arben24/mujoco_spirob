@@ -67,7 +67,7 @@ GEOM_SCENARIOS = [
 FIXED_PARAMS = {
     "tip_d": 0.01,
     "Delta_theta_deg": 30,
-    "include_geom_pos": False,
+    "include_geom_pos": True,
 }
 
 # Liste zur Speicherung der Ergebnisse: Jedes Element ist ein Dict {record: ExperimentRecord}
@@ -92,6 +92,18 @@ parser.add_argument(
     type=int,
     default=30,
     help="Video FPS (default: 30)"
+)
+parser.add_argument(
+    "--enable-position-estimation",
+    action="store_true",
+    help="Enable ACC+GYRO position estimation and save time-series to data.parquet"
+)
+parser.add_argument(
+    "--position-estimator-segments",
+    nargs="+",
+    type=int,
+    default=[],
+    help="List of segment IDs to estimate, e.g. 0 5 10"
 )
 args = parser.parse_args()
 
@@ -156,6 +168,8 @@ for config in SIM_CONFIGS:
             video_path=video_path,
             video_resolution=video_resolution,
             video_fps=args.video_fps,
+            enable_position_estimation=args.enable_position_estimation,
+            position_estimator_segments=args.position_estimator_segments,
         )
     # except Exception as e:
     #     print(f"Fehler in Lauf {run_id}: {e}")
@@ -171,7 +185,8 @@ for config in SIM_CONFIGS:
         controller_info=str(config["controller"]),
         geom_type=config["geom_func"].__name__.replace('setup_', ''),
         geom_params=config["geom_kwargs"],
-        include_geom_pos=config["include_geom_pos"]
+        include_geom_pos=config["include_geom_pos"],
+        
     )
     sensors = exp.generate_sensor_meta(current_df)
     record = ds.ExperimentRecord(run_id=run_id, config=exp_config, sensors=sensors)

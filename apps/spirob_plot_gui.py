@@ -23,6 +23,8 @@ from PyQt6.QtCore import QUrl
 import matplotlib
 matplotlib.use('QtAgg')  # Use Qt backend for matplotlib
 
+import polars as pl
+
 from math_spirob.meta_analyzer import (
     crawl_experiments, load_summary_parquet,
     plot_force_distribution, plot_force_peak_usage
@@ -43,7 +45,7 @@ class PlotGUI(QMainWindow):
         self.all_runs = []
         self.filtered_runs = []
         self.available_sensors = []
-        self.available_axes = ['X', 'Y', 'Z']
+        self.available_axes = ['X', 'Y', 'Z', 'w', 'x', 'y', 'z', 'norm']
         self.available_metrics = ['raw', 'mean', 'std', 'min', 'max', 'skew', 'kurtosis']
         
         self.init_ui()
@@ -211,6 +213,30 @@ class PlotGUI(QMainWindow):
                     sensor_names.add(s.name)
             except Exception as e:
                 self.log_status(f"Warning: failed to load sensors for run {run_id}: {e}")
+        
+        # Add position estimation sensors from data.parquet columns
+        for run_id in self.all_runs:
+            try:
+                _, lf = load_experiment(run_id)
+                df = lf.select(pl.col(pl.Float64)).collect()  # only numerical columns
+                for col in df.columns:
+                    if col.startswith(('geom_pos_', 'pos_estimate_', 'vel_estimate_')):
+                        # Extract sensor name, e.g., "geom_pos_0" from "geom_pos_0_x"
+                        parts = col.split('_')
+                        if col.startswith('geom_pos_'):
+                            sensor_name = '_'.join(parts[:3])  # geom_pos_0
+                        elif col.startswith(('pos_estimate_', 'vel_estimate_')):
+                            sensor_name = '_'.join(parts[:3])  # pos_estimate_0 or vel_estimate_0
+                        sensor_names.add(sensor_name)
+                    elif col.startswith(('jointpos_', 'jointvel_')):
+                        # Extract base sensor name, e.g., "jointpos_0" from "jointpos_0" or "jointpos_0_0"
+                        parts = col.split('_')
+                        if len(parts) >= 2:
+                            sensor_name = f"{parts[0]}_{parts[1]}"
+                            sensor_names.add(sensor_name)
+            except Exception as e:
+                self.log_status(f"Warning: failed to inspect position columns for {run_id}: {e}")
+        
         self.available_sensors = sorted(sensor_names)
         self.update_sensor_list()
     
@@ -228,11 +254,29 @@ class PlotGUI(QMainWindow):
                 record, _ = load_experiment(run_id)
                 for s in record.sensors:
                     sensor_names.add(s.name)
+                
+                # Add position estimation sensors from data.parquet
+                _, lf = load_experiment(run_id)
+                df = lf.select(pl.col(pl.Float64)).collect()
+                for col in df.columns:
+                    if col.startswith(('geom_pos_', 'pos_estimate_', 'vel_estimate_')):
+                        parts = col.split('_')
+                        if col.startswith('geom_pos_'):
+                            sensor_name = '_'.join(parts[:3])
+                        elif col.startswith(('pos_estimate_', 'vel_estimate_')):
+                            sensor_name = '_'.join(parts[:3])
+                        sensor_names.add(sensor_name)
+                    elif col.startswith(('jointpos_', 'jointvel_')):
+                        parts = col.split('_')
+                        if len(parts) >= 2:
+                            sensor_name = f"{parts[0]}_{parts[1]}"
+                            sensor_names.add(sensor_name)
             except Exception as e:
-                self.log_status(f"Warning: failed to load sensors for run {run_id}: {e}")
+                self.log_status(f"Warning: failed to load sensors for {run_id}: {e}")
         
         self.available_sensors = sorted(sensor_names)
         self.update_sensor_list()
+        self.log_status(f"Updated sensors for {len(runs)} runs: {len(self.available_sensors)} available")
     
     def apply_filters(self):
         filters = {}
@@ -285,7 +329,10 @@ class PlotGUI(QMainWindow):
     def plot_time_series(self):
         runs = self.get_selected_runs()
         sensors = self.get_selected_sensors()
-        axes = [self.axes_combo.currentText()]
+        if any(s.startswith("jointpos_") or s.startswith("jointvel_") for s in sensors):
+            axes = ['0']
+        else:
+            axes = [self.axes_combo.currentText()]
         metric = self.metric_combo.currentText()
         
         if not runs:
@@ -296,6 +343,7 @@ class PlotGUI(QMainWindow):
             return
         
         # Check for missing columns in each run
+        missing_cols = []
         for run in runs:
             try:
                 record, df = load_experiment(run)
@@ -303,11 +351,21 @@ class PlotGUI(QMainWindow):
                     for ax in axes:
                         col = f"{sensor}_{ax}"
                         if col not in df.columns:
-                            col = sensor
-                        if col not in df.columns:
-                            self.log_status(f"Warning: Column {col} not found in run {run}, plot may be incomplete")
+                            # Fallback for quaternions that have no axes (w/x/y/z)
+                            if ax in ["w", "x", "y", "z"] and sensor.endswith("_quat"):
+                                col = f"{sensor}_{ax}"
+                            elif ax == "norm" and sensor.endswith("_vel"):
+                                col = f"{sensor}_norm"
+                            elif sensor.startswith("jointpos_") or sensor.startswith("jointvel_"):
+                                col = f"{sensor}_0"
+                            if col not in df.columns:
+                                missing_cols.append(col)
+                                continue
             except Exception as e:
                 self.log_status(f"Error checking columns for run {run}: {e}")
+        
+        if missing_cols:
+            self.log_status(f"Warning: Some columns not found: {missing_cols}, plot may be incomplete")
         
         try:
             plot_time_series(runs, sensors, axes, metric)
@@ -323,7 +381,10 @@ class PlotGUI(QMainWindow):
             QMessageBox.warning(self, "Selection Error", "Please select a sensor")
             return
         sensor = sensors[0]  # Take first
-        axis = self.axes_combo.currentText()
+        if sensor.startswith("jointpos_") or sensor.startswith("jointvel_"):
+            axis = '0'
+        else:
+            axis = self.axes_combo.currentText()
         metric = self.metric_combo.currentText()
         
         if len(runs) < 2:
@@ -331,16 +392,26 @@ class PlotGUI(QMainWindow):
             return
         
         # Check for missing columns in each run
+        missing_cols = []
         for run in runs:
             try:
                 record, df = load_experiment(run)
                 col = f"{sensor}_{axis}_{metric}"
                 if col not in df.columns:
                     col = f"{sensor}_{metric}"
-                if col not in df.columns:
-                    self.log_status(f"Warning: Column {col} not found in run {run}, comparison may be incomplete")
+                    if col not in df.columns:
+                        # Fallback for quaternions and norms in aggregated data
+                        if axis in ["w", "x", "y", "z"] and sensor.endswith("_quat"):
+                            col = f"{sensor}_{axis}_{metric}"
+                        elif axis == "norm" and sensor.endswith("_vel"):
+                            col = f"{sensor}_norm_{metric}"
+                        if col not in df.columns:
+                            missing_cols.append(col)
             except Exception as e:
                 self.log_status(f"Error checking columns for run {run}: {e}")
+        
+        if missing_cols:
+            self.log_status(f"Warning: Some columns not found: {missing_cols}, comparison may be incomplete")
         
         try:
             plot_comparison(runs, sensor, axis, metric)

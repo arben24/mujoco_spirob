@@ -2,9 +2,11 @@ import polars as pl
 from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 from typing import List, Dict, Any, Optional
 from .data_schema import ExperimentRecord, DataGroup
 from .analyzer import load_experiment
+from .simple_segment_estimator import SimpleSegmentEstimator
 
 def crawl_experiments(base_dir: str = "build") -> List[str]:
     """
@@ -137,6 +139,131 @@ def compute_metrics(record: ExperimentRecord, lf: pl.LazyFrame) -> Dict[str, Any
             metrics["max_contact_share_segment"] = max_share_sensor.name
             metrics["max_contact_share_value"] = metrics[f"{max_share_sensor.name}_contact_share_max"]
 
+    # Position estimation using ACC + GYRO
+    enable_estimation = getattr(record.config, 'enable_position_estimation', False)
+    if enable_estimation:
+        metrics.update(_compute_position_metrics(record, lf))
+
+    return metrics
+
+def _compute_position_metrics(record: ExperimentRecord, lf: pl.LazyFrame) -> Dict[str, Any]:
+    """
+    Compute position estimation metrics using SimpleSegmentEstimator.
+    """
+    metrics = {}
+    
+    # Collect segment IDs from ACC sensors (assuming acc_0, acc_1, ... correspond to segments)
+    acc_sensors = [s for s in record.sensors if s.group == DataGroup.ACC]
+    gyro_sensors = [s for s in record.sensors if s.group == DataGroup.GYRO]
+    
+    if not acc_sensors or not gyro_sensors:
+        return metrics
+    
+    # Extract segment IDs (assuming naming like acc_0, gyro_0, etc.)
+    segment_ids = []
+    for sensor in acc_sensors:
+        try:
+            seg_id = int(sensor.name.split('_')[1])
+            segment_ids.append(seg_id)
+        except (IndexError, ValueError):
+            continue
+    
+    segment_ids = sorted(list(set(segment_ids)))
+    
+    if not segment_ids:
+        return metrics
+    
+    # Initialize estimator
+    initial_positions = (getattr(record.config, 'initial_positions', {}) if record.config else {}) or {}
+    initial_orientations = (getattr(record.config, 'initial_orientations', {}) if record.config else {}) or {}
+    
+    estimator = SimpleSegmentEstimator(
+        segment_ids=segment_ids,
+        initial_positions=initial_positions,
+        initial_orientations=initial_orientations
+    )
+    
+    # Collect data
+    df = lf.collect()
+    time_col = 'time_s'
+    if time_col not in df.columns:
+        # Estimate dt from config
+        dt = getattr(record.config, 'dt', 0.01)  # Default 100Hz
+        time_steps = len(df)
+        times = np.arange(0, time_steps * dt, dt)
+        df = df.with_columns(pl.Series(time_col, times))
+    
+    # Process each timestep
+    for row in df.iter_rows(named=True):
+        sensor_data = {}
+        for seg_id in segment_ids:
+            acc_cols = [f'acc_{seg_id}_X', f'acc_{seg_id}_Y', f'acc_{seg_id}_Z']
+            gyro_cols = [f'gyro_{seg_id}_X', f'gyro_{seg_id}_Y', f'gyro_{seg_id}_Z']
+            
+            if all(col in row for col in acc_cols + gyro_cols):
+                sensor_data[seg_id] = {
+                    'acc': [row[col] for col in acc_cols],
+                    'gyro': [row[col] for col in gyro_cols]
+                }
+        
+        if sensor_data:
+            dt = row.get('dt', 0.01) if row is not None else 0.01  # Use dt column if available, else default
+            estimator.update_batch(sensor_data, dt)
+    
+    # Extract final metrics
+    all_states = estimator.get_all_states()
+    
+    max_drift = 0.0
+    max_drift_seg = None
+    
+    for seg_id, state in all_states.items():
+        pos = state.position
+        vel = state.velocity
+        quat = state.orientation
+        
+        # Position metrics
+        metrics[f'seg_{seg_id}_pos_x'] = pos[0]
+        metrics[f'seg_{seg_id}_pos_y'] = pos[1]
+        metrics[f'seg_{seg_id}_pos_z'] = pos[2]
+        
+        # Orientation metrics
+        metrics[f'seg_{seg_id}_quat_w'] = quat[0]
+        metrics[f'seg_{seg_id}_quat_x'] = quat[1]
+        metrics[f'seg_{seg_id}_quat_y'] = quat[2]
+        metrics[f'seg_{seg_id}_quat_z'] = quat[3]
+        
+        # Velocity metrics
+        vel_norm = np.linalg.norm(vel)
+        metrics[f'seg_{seg_id}_vel_norm'] = vel_norm
+        
+        # Drift metric (vertical displacement from initial)
+        drift = abs(pos[2])  # Assuming z is vertical
+        metrics[f'seg_{seg_id}_drift_z'] = drift
+        
+        if drift > max_drift:
+            max_drift = drift
+            max_drift_seg = seg_id
+    
+    # Global metrics
+    if segment_ids:
+        tip_seg = max(segment_ids)  # Assume highest ID is tip
+        tip_state = all_states[tip_seg]
+        tip_pos = tip_state.position
+        tip_quat = tip_state.orientation
+        
+        metrics['tip_position_x'] = tip_pos[0]
+        metrics['tip_position_y'] = tip_pos[1]
+        metrics['tip_position_z'] = tip_pos[2]
+        
+        metrics['tip_orientation_w'] = tip_quat[0]
+        metrics['tip_orientation_x'] = tip_quat[1]
+        metrics['tip_orientation_y'] = tip_quat[2]
+        metrics['tip_orientation_z'] = tip_quat[3]
+        
+        if max_drift_seg is not None:
+            metrics['max_drift_segment'] = max_drift_seg
+            metrics['max_drift_value'] = max_drift
+    
     return metrics
 
 def aggregate_experiments(base_dir: str = "build") -> pl.DataFrame:
@@ -161,11 +288,11 @@ def aggregate_experiments(base_dir: str = "build") -> pl.DataFrame:
             # Extract parameters
             params = {
                 "run_id": run_id,
-                "L_target": record.config.L_target,
-                "base_d": record.config.base_d,
-                "sim_time": record.config.sim_time,
-                "controller_info": record.config.controller_info,
-                "geom_type": record.config.geom_type,
+                "L_target": getattr(record.config, 'L_target', None) if record.config else None,
+                "base_d": getattr(record.config, 'base_d', None) if record.config else None,
+                "sim_time": getattr(record.config, 'sim_time', None) if record.config else None,
+                "controller_info": getattr(record.config, 'controller_info', None) if record.config else None,
+                "geom_type": getattr(record.config, 'geom_type', None) if record.config else None,
             }
             params.update(metrics)
             summary_data.append(params)
@@ -339,6 +466,10 @@ def run_meta_analysis(base_dir: str = "build", plot: bool = False, y_metrics: Li
     Checks for duplicate run_ids after aggregation.
     """
     df = aggregate_experiments(base_dir)
+    
+    if df.is_empty():
+        print("No summary data to process")
+        return df
     
     # Check for duplicate run_ids
     run_id_counts = df.group_by("run_id").len()

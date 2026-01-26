@@ -27,7 +27,7 @@ def generate_sensor_meta(df: pl.DataFrame) -> List[SensorMeta]:
         if col == "time_s":
             continue
         # Special handling for body contact forces
-        if col.startswith("body_") and "_contact_force_" in col and col.endswith(("_X", "_Y", "_Z")):
+        if "_contact_force_" in col and col.endswith(("_X", "_Y", "_Z")):
             base_name = col[:-2]
             if base_name + "_X" in columns and base_name + "_Y" in columns and base_name + "_Z" in columns:
                 name = base_name
@@ -89,10 +89,13 @@ def save_experiment(df: pl.DataFrame, record: ExperimentRecord, base_dir: str = 
     data_path = base_path / "data.parquet"
     df.write_parquet(str(data_path))
 
-    # Validate that body contact force columns are present
-    body_force_cols = [col for col in df.columns if col.startswith("body_") and "_contact_force_" in col]
+    # Validate that body contact force columns are present (optional)
+    body_force_cols = [col for col in df.columns if "_contact_force_" in col]
     if not body_force_cols:
-        raise ValueError(f"No body contact force columns found in {data_path}. Body forces may not be included in the DataFrame.")
+        print(f"Warning: No body contact force columns found in {data_path}. "
+              "Body force metadata will be skipped. "
+              "Use include_body_forces=True in simulation if needed.")
+        # Continue without raising error
 
     # Save metadata as JSON
     meta_path = base_path / "meta.json"

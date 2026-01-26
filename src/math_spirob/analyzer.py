@@ -25,7 +25,11 @@ def load_experiment(run_id: str, base_dir: str = "build") -> Tuple[ExperimentRec
     # Load and validate metadata
     with open(meta_path, 'r') as f:
         meta_dict = json.load(f)
-    record = ExperimentRecord(**meta_dict)
+    try:
+        record = ExperimentRecord(**meta_dict)
+    except Exception as e:
+        print(f"Warning: Failed to validate meta.json for {run_id}: {e}")
+        raise FileNotFoundError(f"Invalid meta.json for {run_id}")
 
     # Open LazyFrame
     lf = pl.scan_parquet(str(data_path))
