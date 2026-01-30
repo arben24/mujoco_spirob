@@ -191,20 +191,17 @@ def initialize_data_structures(model: mj.MjModel, sim_time: float) -> Tuple[Dict
     geom_metadata = []
     i = 0
     while True:
-        name = f"geom_{i}"
+        name = f"g_{i}"
         geom_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_GEOM, name)
         if geom_id == -1:
             break
         
         pos_array = np.zeros((num_steps, 3), dtype=np.float64)
-        quat_array = np.zeros((num_steps, 4), dtype=np.float64)
         positions_over_time[name] = pos_array
-        quaternions_over_time[name] = quat_array
         
         geom_metadata.append({
             'name': name,
             'pos_array': pos_array,
-            'quat_array': quat_array,
             'id': geom_id
         })
         i += 1
@@ -215,7 +212,7 @@ def initialize_data_structures(model: mj.MjModel, sim_time: float) -> Tuple[Dict
         "acc": acc_over_time, "gyro": gyro_over_time, "tendon_frc": tendon_frc_over_time, 
         "tendon_pos": tendon_pos_over_time, "tendon_vel": tendon_vel_over_time, 
         "joint_pos": joint_pos_over_time, "joint_vel": joint_vel_over_time, 
-        "geom_pos": positions_over_time, "geom_quat": quaternions_over_time, "bodycontactfrc": body_contact_force_over_time
+        "geom_pos": positions_over_time, "bodycontactfrc": body_contact_force_over_time
     }
 
     return sensor_dicts, sensor_metadata, geom_metadata, body_metadata, time_array, num_steps
@@ -246,11 +243,11 @@ def create_single_polars_dataframe(
                     df_dict[f"{base}_y"] = array[:, 1]
                     df_dict[f"{base}_z"] = array[:, 2]
                 elif group_name == "geom_quat":
-                    base = f"geom_pos_{geom_id}"
-                    df_dict[f"{base}_quat_w"] = array[:, 0]
-                    df_dict[f"{base}_quat_x"] = array[:, 1]
-                    df_dict[f"{base}_quat_y"] = array[:, 2]
-                    df_dict[f"{base}_quat_z"] = array[:, 3]
+                    base = f"geom_quat_{geom_id}"
+                    df_dict[f"{base}_w"] = array[:, 0]
+                    df_dict[f"{base}_x"] = array[:, 1]
+                    df_dict[f"{base}_y"] = array[:, 2]
+                    df_dict[f"{base}_z"] = array[:, 3]
             elif array.ndim == 1:
                 # 1D sensor
                 df_dict[sensor_name] = array
@@ -417,7 +414,7 @@ def run_simulation_and_get_dataframe(
         meta['array'][step_index] = data.sensor(meta['index']).data
     if include_geom_pos:
         for meta in geom_metadata:
-            meta['array'][step_index] = data.geom_xpos[meta['id']]
+            meta['pos_array'][step_index] = data.geom_xpos[meta['id']]
         
     steps_to_run = num_steps - 1
 
@@ -474,7 +471,6 @@ def run_simulation_and_get_dataframe(
                     if include_geom_pos:
                         for meta in geom_metadata:
                             meta['pos_array'][step_index] = data.geom_xpos[meta['id']]
-                            meta['quat_array'][step_index] = data.geom_xquat[meta['id']]
                     
                     # Sammle Body-Kontaktkräfte
                     body_forces = extract_body_contact_forces(model, data)
@@ -555,7 +551,6 @@ def run_simulation_and_get_dataframe(
             if include_geom_pos:
                 for meta in geom_metadata:
                     meta['pos_array'][step_index] = data.geom_xpos[meta['id']]
-                    meta['quat_array'][step_index] = data.geom_xquat[meta['id']]
             
             # Sammle Body-Kontaktkräfte
             body_forces = extract_body_contact_forces(model, data)

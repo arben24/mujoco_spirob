@@ -27,6 +27,8 @@ dependencies = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-rtd-theme>=3.0.2",
     "imageio[ffmpeg]>=2.34.0",
+    "pyserial>=3.5",
+    "customtkinter>=5.2.2",
 ]
 
 [tool.pytest]
