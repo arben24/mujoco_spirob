@@ -343,14 +343,14 @@ class XMLBuilder:
         
         a = -np.tan(np.pi/2 - (self.phi_taper/2))
         b = -1
-        c = np.tan(np.pi/2 - (self.phi_taper/2)) * ((half_width * self.beta) - 0.003)
+        c = np.tan(np.pi/2 - (self.phi_taper/2)) * ((half_width * self.beta) - 0.008)
 
         solv0 = ms.solve_for_points(a=a, b=b, c=c, theta_deg=np.rad2deg(self.Delta_theta))
         #xC0, yC0 = solv0["C"]
         xD0, yD0 = solv0["D"]
         x_in, y_in, z_in = xD0, 0, yD0
 
-        c = np.tan(np.pi/2 - (self.phi_taper/2)) * ((half_width) - 0.003)
+        c = np.tan(np.pi/2 - (self.phi_taper/2)) * ((half_width) - 0.008)
         solv1 = ms.solve_for_points(a=a, b=b, c=c, theta_deg=np.rad2deg(self.Delta_theta))
         xC1, yC1 = solv1["C"]
         #xD1, yD1 = solv1["D"]
@@ -382,7 +382,7 @@ class XMLBuilder:
         if SensorRegistry.exists("acc") or SensorRegistry.exists("gyro"):
             return f'''      <body name="seg_{i}" pos="0 0 {seg_len * self.beta:.6g}">
             <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.05" damping="0.05"
-                   limited="true" range="{-np.rad2deg(self.Delta_theta)+0.1} {np.rad2deg(self.Delta_theta)-0.1}"
+                   limited="true" range="{-np.rad2deg(self.Delta_theta)+0.02} {np.rad2deg(self.Delta_theta)-0.02}"
                    solimplimit="0.9 0.95 0.001" solreflimit="0.01 0.5"/>
             <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
                   rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>
@@ -395,7 +395,7 @@ class XMLBuilder:
 
         return f'''      <body name="seg_{i}" pos="0 0 {seg_len * self.beta:.6g}">
             <joint name="j_{i}" type="hinge" axis="0 1 0" pos="0 0 0" stiffness="0.05" damping="0.05"
-                   limited="true" range="{-np.rad2deg(self.Delta_theta)+0.1} {np.rad2deg(self.Delta_theta)-0.1}"
+                   limited="true" range="{-np.rad2deg(self.Delta_theta)+0.02} {np.rad2deg(self.Delta_theta)-0.02}"
                    solimplimit="0.9 0.95 0.001" solreflimit="0.01 0.5"/>
             <geom name="g_{i}" type="box" size="{hx:.6g} {hy:.6g} {hz:.6g}" pos="0 0 {hz:.6g}" 
                   rgba="{rgba}" contype="1" conaffinity="1" density="1100"/>

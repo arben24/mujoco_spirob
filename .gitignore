@@ -56,4 +56,35 @@ Thumbs.db
 *.json
 *.png
 
+# MATLAB
+# -----------------
+*.m~                    # Autosaves
+*.asv                   # Windows Autosave
+*.mex*                  # Compiled MEX
+octave-workspace        # Octave Session
+
+# Simulink
+# -----------------
+*.slx.original          # Backup-Dateien
+*.autosave              # Autosave
+*.slxc                  # Cache Files
+apps/Matlab/slprj/              # Code Generation Cache
+apps/Matlab/sccprj/                 # Stateflow Cache
+apps/Matlab/codegen/                # Code Generation
+apps/Matlab/*.slxc
+apps/Matlab/*.autosave
+apps/Matlab/*.mat  # Cache .mat
+apps/Matlab/.m/                     # MATLAB Runtime Cache
+
+**/slprj/
+
+# Packaged Files
+*.mlappinstall
+*.mltbx
+
+# Logs & Temp
+*.log
+matlab_crash_dump*
+*.sessionState*
+
 MUJOCO_LOG.TXT
