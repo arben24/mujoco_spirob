@@ -487,8 +487,8 @@ class XMLBuilder:
         out = ["  <actuator>"]
         for k in range(self.NUM_CABLES):
             out.append(
-                f'    <position name="tendon_act_{k}" tendon="tendon_{k}" '
-                f'kp="200" forcerange="-200 0" ctrlrange="0 0.5"/>'
+                f'    <motor name="tendon_act_{k}" tendon="tendon_{k}" '
+                f'gear="1" forcerange="-200 200" ctrlrange="-50 0"/>'
             )
         out.append("  </actuator>\n")
         return "\n".join(out)
