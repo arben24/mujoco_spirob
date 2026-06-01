@@ -9,6 +9,7 @@ import itertools
 import numpy as np
 import os
 import argparse
+import time
 
 # --- 1. Konfiguration der Simulationsläufe ---
 
@@ -20,7 +21,7 @@ VARIABLE_PARAMS = {
     # "base_d":   [0.05, 0.07, 0.09],
     # "sim_time": [2.0,3.0],
     "L_target": [0.30, 0.35, 0.40],
-    "base_d":   [0.05,0.08],
+    "base_d":   [0.08,0.10],
     "sim_time": [2.0],
     "controller": {
         #"Static": spir_sim.static_controller,
@@ -65,7 +66,7 @@ GEOM_SCENARIOS = [
 # --- B. Feste Parameter (Der "Fixed Context") ---
 # Diese Werte werden zu JEDER Konfiguration hinzugefügt.
 FIXED_PARAMS = {
-    "tip_d": 0.01,
+    "tip_d": 0.03,
     "Delta_theta_deg": 30,
     "include_geom_pos": True,
 }
@@ -156,6 +157,9 @@ for config in SIM_CONFIGS:
         print(f"Invalid video resolution format: {args.video_resolution}. Using default 1280x720.")
         video_resolution = (1280, 720)
     
+    
+    start_time = time.time()
+    
     current_df = spir_sim.run_simulation_and_get_dataframe(
             model=model, 
             data=data, 
@@ -171,6 +175,9 @@ for config in SIM_CONFIGS:
             enable_position_estimation=args.enable_position_estimation,
             position_estimator_segments=args.position_estimator_segments,
         )
+    
+    elapsed_time = time.time() - start_time
+    print(f"Simulation completed in {elapsed_time:.2f} seconds. DataFrame shape: {current_df.shape}")
     # except Exception as e:
     #     print(f"Fehler in Lauf {run_id}: {e}")
     #     continue 

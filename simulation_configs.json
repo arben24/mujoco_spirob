@@ -1,9 +1,9 @@
 [
     {
         "L_target": 0.3,
-        "base_d": 0.05,
+        "base_d": 0.08,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -29,9 +29,9 @@
     },
     {
         "L_target": 0.3,
-        "base_d": 0.05,
+        "base_d": 0.08,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -57,9 +57,9 @@
     },
     {
         "L_target": 0.3,
-        "base_d": 0.08,
+        "base_d": 0.1,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -85,9 +85,9 @@
     },
     {
         "L_target": 0.3,
-        "base_d": 0.08,
+        "base_d": 0.1,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -113,9 +113,9 @@
     },
     {
         "L_target": 0.35,
-        "base_d": 0.05,
+        "base_d": 0.08,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -141,9 +141,9 @@
     },
     {
         "L_target": 0.35,
-        "base_d": 0.05,
+        "base_d": 0.08,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -169,9 +169,9 @@
     },
     {
         "L_target": 0.35,
-        "base_d": 0.08,
+        "base_d": 0.1,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -197,9 +197,9 @@
     },
     {
         "L_target": 0.35,
-        "base_d": 0.08,
+        "base_d": 0.1,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -225,9 +225,9 @@
     },
     {
         "L_target": 0.4,
-        "base_d": 0.05,
+        "base_d": 0.08,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -253,9 +253,9 @@
     },
     {
         "L_target": 0.4,
-        "base_d": 0.05,
+        "base_d": 0.08,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -281,9 +281,9 @@
     },
     {
         "L_target": 0.4,
-        "base_d": 0.08,
+        "base_d": 0.1,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {
@@ -309,9 +309,9 @@
     },
     {
         "L_target": 0.4,
-        "base_d": 0.08,
+        "base_d": 0.1,
         "sim_time": 2.0,
-        "tip_d": 0.01,
+        "tip_d": 0.03,
         "Delta_theta_deg": 30,
         "include_geom_pos": true,
         "geom_kwargs": {

@@ -72,6 +72,7 @@ apps/Matlab/slprj/              # Code Generation Cache
 apps/Matlab/sccprj/                 # Stateflow Cache
 apps/Matlab/codegen/                # Code Generation
 apps/Matlab/*.slxc
+apps/Matlab/*.original
 apps/Matlab/*.autosave
 apps/Matlab/*.mat  # Cache .mat
 apps/Matlab/.m/                     # MATLAB Runtime Cache
@@ -86,5 +87,13 @@ apps/Matlab/.m/                     # MATLAB Runtime Cache
 *.log
 matlab_crash_dump*
 *.sessionState*
+
+# Video- und Bilddateien
+*.avi
+*.mp4
+*.jpg
+*.jpeg
+*.png
+apps/sys_id/Video/
 
 MUJOCO_LOG.TXT

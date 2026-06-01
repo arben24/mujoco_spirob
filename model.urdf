@@ -1,0 +1,373 @@
+<?xml version="1.0" ?>
+<robot name="converted_robot">
+   <!--generated with mjcf_urdf_simple_converter (https://github.com/Yasu31/mjcf_urdf_simple_converter)-->
+   <link name="world">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.0"/>
+         <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="base">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.0"/>
+         <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="fixed" name="world2base_fixed">
+      <parent link="world"/>
+      <child link="base"/>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_13">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0258984" rpy="0.0 0.0 0.0"/>
+         <mass value="0.4797319446881203"/>
+         <inertia ixx="0.00044386129509000846" iyy="0.00044386129509000846" izz="0.000673209772272833" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="fixed" name="base2seg_13_fixed">
+      <parent link="base"/>
+      <child link="seg_13"/>
+      <origin xyz="0.0 0.0 0.0564484" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_12">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0237643" rpy="0.0 0.0 0.0"/>
+         <mass value="0.37064088268763673"/>
+         <inertia ixx="0.0002887386588404793" iyy="0.0002887386588404793" izz="0.0004379330133456822" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_12_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_12">
+      <parent link="seg_13"/>
+      <child link="j_12_jointbody"/>
+      <origin xyz="0.0 0.0 0.0517968" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_12_offset">
+      <parent link="j_12_jointbody"/>
+      <child link="seg_12"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_11">
+      <inertial>
+         <origin xyz="0.0 0.0 0.021806" rpy="0.0 0.0 0.0"/>
+         <mass value="0.28635719271631993"/>
+         <inertia ixx="0.0001878291791521299" iyy="0.0001878291791521299" izz="0.0002848828158929416" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_11_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_11">
+      <parent link="seg_12"/>
+      <child link="j_11_jointbody"/>
+      <origin xyz="0.0 0.0 0.0475285" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_11_offset">
+      <parent link="j_11_jointbody"/>
+      <child link="seg_11"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_10">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0200091" rpy="0.0 0.0 0.0"/>
+         <mass value="0.22123908119739444"/>
+         <inertia ixx="0.00012218537578841877" iyy="0.00012218537578841877" izz="0.00018531996369328962" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_10_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_10">
+      <parent link="seg_11"/>
+      <child link="j_10_jointbody"/>
+      <origin xyz="0.0 0.0 0.043612" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_10_offset">
+      <parent link="j_10_jointbody"/>
+      <child link="seg_10"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_9">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0183603" rpy="0.0 0.0 0.0"/>
+         <mass value="0.17093005001116082"/>
+         <inertia ixx="7.948408465436421e-05" iyy="7.948408465436421e-05" izz="0.00012055441919735722" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_9_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_9">
+      <parent link="seg_10"/>
+      <child link="j_9_jointbody"/>
+      <origin xyz="0.0 0.0 0.0400182" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_9_offset">
+      <parent link="j_9_jointbody"/>
+      <child link="seg_9"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_8">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0168473" rpy="0.0 0.0 0.0"/>
+         <mass value="0.13205981956871285"/>
+         <inertia ixx="5.170517811552635e-05" iyy="5.170517811552635e-05" izz="7.842186359023177e-05" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_8_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_8">
+      <parent link="seg_9"/>
+      <child link="j_8_jointbody"/>
+      <origin xyz="0.0 0.0 0.0367205" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_8_offset">
+      <parent link="j_8_jointbody"/>
+      <child link="seg_8"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_7">
+      <inertial>
+         <origin xyz="0.0 0.0 0.015459" rpy="0.0 0.0 0.0"/>
+         <mass value="0.10202919229670984"/>
+         <inertia ixx="3.363491476744319e-05" iyy="3.363491476744319e-05" izz="5.101449229692125e-05" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_7_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_7">
+      <parent link="seg_8"/>
+      <child link="j_7_jointbody"/>
+      <origin xyz="0.0 0.0 0.0336946" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_7_offset">
+      <parent link="j_7_jointbody"/>
+      <child link="seg_7"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_6">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0141851" rpy="0.0 0.0 0.0"/>
+         <mass value="0.07882778303330512"/>
+         <inertia ixx="2.188006499318056e-05" iyy="2.188006499318056e-05" izz="3.318580004854553e-05" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_6_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_6">
+      <parent link="seg_7"/>
+      <child link="j_6_jointbody"/>
+      <origin xyz="0.0 0.0 0.030918" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_6_offset">
+      <parent link="j_6_jointbody"/>
+      <child link="seg_6"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_5">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0130162" rpy="0.0 0.0 0.0"/>
+         <mass value="0.06090216849930533"/>
+         <inertia ixx="1.4233252870023131e-05" iyy="1.4233252870023131e-05" izz="2.1587749438099858e-05" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_5_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_5">
+      <parent link="seg_6"/>
+      <child link="j_5_jointbody"/>
+      <origin xyz="0.0 0.0 0.0283703" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_5_offset">
+      <parent link="j_5_jointbody"/>
+      <child link="seg_5"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_4">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0119436" rpy="0.0 0.0 0.0"/>
+         <mass value="0.04705303851868488"/>
+         <inertia ixx="9.258966789980327e-06" iyy="9.258966789980327e-06" izz="1.4043202761570562e-05" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_4_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_4">
+      <parent link="seg_5"/>
+      <child link="j_4_jointbody"/>
+      <origin xyz="0.0 0.0 0.0260324" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_4_offset">
+      <parent link="j_4_jointbody"/>
+      <child link="seg_4"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_3">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0109594" rpy="0.0 0.0 0.0"/>
+         <mass value="0.036353333461852"/>
+         <inertia ixx="6.0231496253647204e-06" iyy="6.0231496253647204e-06" izz="9.1354042675183e-06" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_3_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_3">
+      <parent link="seg_4"/>
+      <child link="j_3_jointbody"/>
+      <origin xyz="0.0 0.0 0.0238873" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_3_offset">
+      <parent link="j_3_jointbody"/>
+      <child link="seg_3"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_2">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0100563" rpy="0.0 0.0 0.0"/>
+         <mass value="0.028086486996171677"/>
+         <inertia ixx="3.9181300750828065e-06" iyy="3.9181300750828065e-06" izz="5.94268474387773e-06" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_2_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_2">
+      <parent link="seg_3"/>
+      <child link="j_2_jointbody"/>
+      <origin xyz="0.0 0.0 0.0219189" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_2_offset">
+      <parent link="j_2_jointbody"/>
+      <child link="seg_2"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_1">
+      <inertial>
+         <origin xyz="0.0 0.0 0.00922765" rpy="0.0 0.0 0.0"/>
+         <mass value="0.021699774682784324"/>
+         <inertia ixx="2.5488353023283388e-06" iyy="2.5488353023283388e-06" izz="3.8658536070003656e-06" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_1_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_1">
+      <parent link="seg_2"/>
+      <child link="j_1_jointbody"/>
+      <origin xyz="0.0 0.0 0.0201127" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_1_offset">
+      <parent link="j_1_jointbody"/>
+      <child link="seg_1"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+   <link name="seg_0">
+      <inertial>
+         <origin xyz="0.0 0.0 0.00846725" rpy="0.0 0.0 0.0"/>
+         <mass value="0.016765155"/>
+         <inertia ixx="1.6580421017934365e-06" iyy="1.6580421017934365e-06" izz="2.5147732499999998e-06" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <link name="j_0_jointbody">
+      <inertial>
+         <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+         <mass value="0.001"/>
+         <inertia ixx="1e-09" iyy="1e-09" izz="1e-09" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+   </link>
+   <joint type="revolute" name="j_0">
+      <parent link="seg_1"/>
+      <child link="j_0_jointbody"/>
+      <origin xyz="0.0 0.0 0.0184553" rpy="0.0 0.0 0.0"/>
+      <axis xyz="0.0 1.0 0.0"/>
+      <limit lower="-0.5136433189524249" upper="0.5136433189524249" effort="100" velocity="100"/>
+   </joint>
+   <joint type="fixed" name="j_0_offset">
+      <parent link="j_0_jointbody"/>
+      <child link="seg_0"/>
+      <origin xyz="-0.0 -0.0 -0.0" rpy="0.0 0.0 0.0"/>
+   </joint>
+</robot>

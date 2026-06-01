@@ -29,6 +29,7 @@ dependencies = [
     "imageio[ffmpeg]>=2.34.0",
     "pyserial>=3.5",
     "customtkinter>=5.2.2",
+    "opencv-contrib-python>=4.13.0.92",
 ]
 
 [tool.pytest]
