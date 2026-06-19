@@ -95,5 +95,6 @@ matlab_crash_dump*
 *.jpeg
 *.png
 apps/sys_id/Video/
+apps/sys_id/builds/
 
 MUJOCO_LOG.TXT
