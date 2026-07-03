@@ -1,8 +1,8 @@
 """
-SpiRob Sensor Aufzeichnungsskript - Hochfrequent & YZ-Magnitude
-===============================================================
+SpiRob Sensor Aufzeichnungsskript - Hochfrequent & YZ-Summe
+============================================================
 - Verwendet den Hardware-Zeitstempel (t_us) für perfekte zeitliche Synchronisation.
-- Berechnet die YZ-Magnitude: sqrt(AccY^2 + AccZ^2).
+- Berechnet die YZ-Summe: AccY + AccZ.
 - Optimierter serieller Leseprozess für maximale Abtastrate (ohne time.sleep).
 """
 
@@ -17,14 +17,17 @@ import math
 import matplotlib.pyplot as plt
 
 # ================== EINSTELLUNGEN ==================
-SERIAL_PORT = '/dev/ttyUSB1'  # Anpassen!
+SERIAL_PORT = '/dev/ttyUSB0'  # Anpassen!
 BAUD_RATE = 1000000
 
 # Aufnahme-Einstellungen
 TRIGGER_THRESHOLD_G = 0.5     # Änderung in 'g' zwischen zwei Messungen, die den Trigger auslöst
 PRE_RECORD_TIME_S = 0.5       # Wie viele Sekunden VOR dem Trigger gespeichert werden sollen
-RECORD_TIME_S = 2.0           # Wie viele Sekunden NACH dem Trigger aufgenommen werden sollen
-EXPECTED_FPS = 500            # Sehr großzügig geschätzt für die Puffergröße
+RECORD_TIME_S = 1.0           # Wie viele Sekunden NACH dem Trigger aufgenommen werden sollen
+MAX_SAMPLE_RATE_HZ = 1000     # Maximale Abtastrate des Sensors; bestimmt die Puffergröße
+
+# Sensor-Filter: None = alle Sensoren akzeptieren, int = nur diese Sensor-ID verarbeiten
+TARGET_SENSOR_ID = None
 
 # ================== BINÄR FORMAT ==================
 FRAME_HDR_0 = 0xAA
@@ -101,7 +104,7 @@ def parse_serial_stream(ser, callback):
 def main():
     builds_dir = ensure_builds_dir()
     
-    max_history = int(PRE_RECORD_TIME_S * EXPECTED_FPS * 4) 
+    max_history = int(PRE_RECORD_TIME_S * MAX_SAMPLE_RATE_HZ * 2)
     pre_trigger_buffer = collections.deque(maxlen=max_history)
     
     recorded_data = []
@@ -115,7 +118,7 @@ def main():
     print("=" * 50)
 
     try:
-        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.01)
         print(f"Verbunden. Warte auf Bewegung (Schwellwert {TRIGGER_THRESHOLD_G}g)...")
     except Exception as e:
         print(f"Fehler beim Öffnen des Ports: {e}")
@@ -123,18 +126,20 @@ def main():
 
     def on_data_received(t_us, frame_id, sensor_id, accX, accY, accZ, magX, magY, magZ):
         nonlocal is_recording, trigger_t_us, last_acc, pre_trigger_buffer, recorded_data
-        
-        # YZ-Magnitude berechnen
-        acc_mag_YZ = accY + accZ
-        
-        row = (t_us, frame_id, sensor_id, accX, accY, accZ, acc_mag_YZ, magX, magY, magZ)
-        
+
+        if TARGET_SENSOR_ID is not None and sensor_id != TARGET_SENSOR_ID:
+            return
+
+        # YZ-Summe berechnen
+        acc_sum_YZ = accY + accZ
+
+        row = (t_us, frame_id, sensor_id, accX, accY, accZ, acc_sum_YZ, magX, magY, magZ)
+
         if not is_recording:
             pre_trigger_buffer.append(row)
-            
-            # Schwellwert-Erkennung über die Magnitude von Y und Z (oder allen 3)
-            # Da X als Schwerkraft konstant bleibt (wenn wir uns nur um X drehen), 
-            # betrachten wir hier nur die Änderung in Y und Z für den sauberen Trigger.
+
+            # Schwellwert-Erkennung: euklidischer Abstand in YZ-Ebene.
+            # X bleibt als Schwerkraftachse konstant, Bewegung zeigt sich in Y und Z.
             if sensor_id in last_acc:
                 l_y, l_z = last_acc[sensor_id]
                 delta = math.sqrt((accY - l_y)**2 + (accZ - l_z)**2)
@@ -174,8 +179,8 @@ def main():
 
     print(f"\nSpeichere {len(recorded_data)} Datenpunkte...")
 
-    # CSV Schreiben (inklusive der YZ Magnitude)
-    headers = ['t_us', 'frame_id', 'sensor_id', 'accX', 'accY', 'accZ', 'acc_mag_YZ', 'magX', 'magY', 'magZ']
+    # CSV Schreiben
+    headers = ['t_us', 'frame_id', 'sensor_id', 'accX', 'accY', 'accZ', 'acc_sum_YZ', 'magX', 'magY', 'magZ']
     with open(csv_filename, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(headers)
@@ -184,33 +189,32 @@ def main():
     # Plot erstellen
     sensors = {}
     for row in recorded_data:
-        t_us, fid, sid, ax, ay, az, amag_yz, mx, my, mz = row
+        t_us, fid, sid, ax, ay, az, asum_yz, mx, my, mz = row
         if sid not in sensors:
-            sensors[sid] = {'t': [], 'ay': [], 'az': [], 'amag_yz': []}
-        
-        # Wir zentrieren die X-Achse so, dass der Trigger exakt bei 0.0 Sekunden liegt
+            sensors[sid] = {'t': [], 'ay': [], 'az': [], 'asum_yz': []}
+
+        # Zeitachse: Trigger liegt bei 0.0 Sekunden
         t_relative_s = (t_us - trigger_t_us) / 1_000_000.0
-        
-        # Filtern: Wir wollen nur den Bereich [-PRE_RECORD_TIME_S bis RECORD_TIME_S]
+
         if t_relative_s >= -PRE_RECORD_TIME_S:
             sensors[sid]['t'].append(t_relative_s)
             sensors[sid]['ay'].append(ay)
             sensors[sid]['az'].append(az)
-            sensors[sid]['amag_yz'].append(amag_yz)
+            sensors[sid]['asum_yz'].append(asum_yz)
 
     num_sensors = len(sensors)
     fig, axes = plt.subplots(num_sensors, 1, figsize=(10, 3.5 * num_sensors), sharex=True)
     if num_sensors == 1:
         axes = [axes]
     
-    fig.suptitle(f"SpiRob Gelenk-Ausschwingen (YZ-Magnitude)", fontsize=14)
+    fig.suptitle(f"SpiRob Gelenk-Ausschwingen (YZ-Summe)", fontsize=14)
 
     for idx, (sid, sdata) in enumerate(sensors.items()):
         ax = axes[idx]
         
         ax.plot(sdata['t'], sdata['ay'], label='Acc Y', linewidth=1.0, alpha=0.5)
         ax.plot(sdata['t'], sdata['az'], label='Acc Z', linewidth=1.0, alpha=0.5)
-        ax.plot(sdata['t'], sdata['amag_yz'], label='Magnitude YZ', linewidth=1.5, color='black')
+        ax.plot(sdata['t'], sdata['asum_yz'], label='Summe YZ', linewidth=1.5, color='black')
         
         # Markiere den Zeitpunkt des Triggers (exakt bei 0)
         ax.axvline(x=0.0, color='r', linestyle='--', label='Trigger')

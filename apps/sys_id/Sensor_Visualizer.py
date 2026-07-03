@@ -28,10 +28,10 @@ except ImportError:
     print("PyQtGraph nicht installiert. Installiere mit: pip install pyqtgraph PyQt6")
 
 # ================== EINSTELLUNGEN ==================
-SERIAL_PORT = '/dev/ttyUSB1'  # Anpassen je nach System (z.B. COM3 auf Windows)
+SERIAL_PORT = '/dev/ttyUSB0'  # Anpassen je nach System (z.B. COM3 auf Windows)
 BAUD_RATE = 1000000
-MAX_POINTS = 200          # Mehr Punkte fuer bessere Historie
-UPDATE_INTERVAL = 8    # ~8ms = ca. 120 FP
+MAX_POINTS = 300          # Mehr Punkte fuer bessere Historie
+UPDATE_INTERVAL = 1    # ~8ms = ca. 120 FP
 
 # Glaettung
 SMOOTHING_ALPHA = 0.5  # 0.1 = sehr glatt, 0.5 = schnell
@@ -237,6 +237,11 @@ class FastSensorVisualizer:
         # Kurven-Dictionary
         self.curves = {}
         
+        # Frequenzzähler
+        self.last_time = time.time()
+        self.packet_count = 0
+        self.hz = 0.0
+        
         # Serial
         self.ser = None
         self.running_event = threading.Event()
@@ -268,13 +273,29 @@ class FastSensorVisualizer:
         """Update-Funktion - wird vom Timer aufgerufen."""
         # Alle Daten aus Queue verarbeiten
         processed = 0
-        while not data_queue.empty() and processed < 50:  # Max 50 pro Frame
+        while not data_queue.empty() and processed < 300:  # Erhöht für höhere Datenraten
             try:
                 line = data_queue.get_nowait()
                 process_data(line)
                 processed += 1
+                self.packet_count += 1
             except queue.Empty:
                 break
+        
+        # Frequenz berechnen (jede Sekunde)
+        now = time.time()
+        dt = now - self.last_time
+        if dt >= 1.0:
+            num_sensors = len(sensor_data)
+            if num_sensors > 0:
+                # Teilen durch die Anzahl der Sensoren, da pro Zeitschritt für jeden Sensor ein Paket kommt.
+                self.hz = (self.packet_count / num_sensors) / dt
+            else:
+                self.hz = 0.0
+            self.packet_count = 0
+            self.last_time = now
+            self.win.setWindowTitle(f"Sensor Visualisierung - FAST | Frequenz: {self.hz:.1f} Hz ({num_sensors} Sensoren)")
+            print(f"Frequenz: {self.hz:.1f} Hz ({num_sensors} aktive Sensoren)")
         
         # Kurven aktualisieren
         with data_lock:
@@ -450,7 +471,7 @@ class MatplotlibVisualizer:
             print(f"Port {SERIAL_PORT} geoeffnet")
             # Seriellen Puffer leeren und ESP32 in den BOTH-Modus versetzen
             self.ser.reset_input_buffer()
-            self.ser.write(b'b')
+            self.ser.write(b'a')
             print("ESP32 in BOTH-Modus versetzt und Puffer gelöscht.")
         except Exception as e:
             print(f"Port-Fehler: {e}")

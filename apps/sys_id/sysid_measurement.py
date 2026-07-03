@@ -5,14 +5,23 @@ import os
 
 # Beispiel-Messreihe (Masse in Gramm, Winkel in Grad)
 # mass_g = np.array([0, 27, 99, 181, 247, 316, 370])
-# angle_deg = np.array([30-30, 30-26, 30-22, 30-16, 30-7, 30-3, 30-2])
+# angle_deg = np.array([30-30, 30-26, 30-22, 30-16, 30-7, 30-3, 30-2])# r = 0.06
 
-mass_g = np.array([0, 27, 99, 181, 247, 316, 370])
-angle_deg = np.array([30-30, 30-26, 30-22, 30-16, 30-7, 30-3, 30-2])
+#mass_g = np.array([0, 130, 161, 201, 210, 420])    k = 0.5108
+#angle_deg = np.array([0, 10, 15, 20, 25, 30])    #r = 0.077
+
+#mass_g = np.array([0, 61, 86, 155, 197, 200,218])    #k = 0.226
+#angle_deg = np.array([0, 5,10, 20, 25, 27,30])    #r = 0.057
+
+#mass_g = np.array([0, 85, 143, 178, 225, 240,270,380])    #k = 0.293
+#angle_deg = np.array([0, 5,10, 15, 20, 25, 27,30])    #r = 0.05
+
+mass_g = np.array([0, 90, 143, 180, 227, 280, 291, 320])    #k = 0.293
+angle_deg = np.array([0, 5,10, 15, 20, 25, 27, 30])    #r = 0.047
 
 # Konstanten
 g = 9.81 # Erdbeschleunigung in m/s^2
-r = 0.06 # Hebelarm in Metern (6 cm)
+r = 0.047 # Hebelarm in Metern (6 cm)
 
 # Umrechnungen
 mass_kg = mass_g / 1000.0          # Gramm -> Kilogramm
